@@ -20,6 +20,12 @@ export type Database = {
           content_type: string
           created_at: string | null
           id: string
+          model: string | null
+          persona: string | null
+          platform: string | null
+          prompt_used: string | null
+          regenerated_count: number | null
+          tone: string | null
           user_id: string
           webinar_id: string
         }
@@ -28,6 +34,12 @@ export type Database = {
           content_type: string
           created_at?: string | null
           id?: string
+          model?: string | null
+          persona?: string | null
+          platform?: string | null
+          prompt_used?: string | null
+          regenerated_count?: number | null
+          tone?: string | null
           user_id: string
           webinar_id: string
         }
@@ -36,6 +48,12 @@ export type Database = {
           content_type?: string
           created_at?: string | null
           id?: string
+          model?: string | null
+          persona?: string | null
+          platform?: string | null
+          prompt_used?: string | null
+          regenerated_count?: number | null
+          tone?: string | null
           user_id?: string
           webinar_id?: string
         }
@@ -49,8 +67,66 @@ export type Database = {
           },
         ]
       }
+      collection_snippets: {
+        Row: {
+          added_at: string | null
+          collection_id: string
+          snippet_id: string
+        }
+        Insert: {
+          added_at?: string | null
+          collection_id: string
+          snippet_id: string
+        }
+        Update: {
+          added_at?: string | null
+          collection_id?: string
+          snippet_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "collection_snippets_collection_id_fkey"
+            columns: ["collection_id"]
+            isOneToOne: false
+            referencedRelation: "collections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "collection_snippets_snippet_id_fkey"
+            columns: ["snippet_id"]
+            isOneToOne: false
+            referencedRelation: "snippets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      collections: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          name: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
+          ai_tone_default: string | null
           created_at: string | null
           email: string | null
           full_name: string | null
@@ -60,6 +136,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          ai_tone_default?: string | null
           created_at?: string | null
           email?: string | null
           full_name?: string | null
@@ -69,6 +146,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          ai_tone_default?: string | null
           created_at?: string | null
           email?: string | null
           full_name?: string | null
@@ -79,12 +157,68 @@ export type Database = {
         }
         Relationships: []
       }
+      snippets: {
+        Row: {
+          created_at: string | null
+          end_time: number
+          id: string
+          reason: string | null
+          start_time: number
+          status: string | null
+          tags: string[] | null
+          thumbnail_url: string | null
+          transcript_chunk: string | null
+          url: string | null
+          user_id: string
+          webinar_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          end_time: number
+          id?: string
+          reason?: string | null
+          start_time: number
+          status?: string | null
+          tags?: string[] | null
+          thumbnail_url?: string | null
+          transcript_chunk?: string | null
+          url?: string | null
+          user_id: string
+          webinar_id: string
+        }
+        Update: {
+          created_at?: string | null
+          end_time?: number
+          id?: string
+          reason?: string | null
+          start_time?: number
+          status?: string | null
+          tags?: string[] | null
+          thumbnail_url?: string | null
+          transcript_chunk?: string | null
+          url?: string | null
+          user_id?: string
+          webinar_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "snippets_webinar_id_fkey"
+            columns: ["webinar_id"]
+            isOneToOne: false
+            referencedRelation: "webinars"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       transcripts: {
         Row: {
           assembly_ai_id: string | null
           created_at: string | null
           full_text: string | null
           id: string
+          keywords: string[] | null
+          quotes: string[] | null
+          sentiment_timeline: Json | null
           speakers: Json | null
           status: string | null
           timestamps: Json | null
@@ -97,6 +231,9 @@ export type Database = {
           created_at?: string | null
           full_text?: string | null
           id?: string
+          keywords?: string[] | null
+          quotes?: string[] | null
+          sentiment_timeline?: Json | null
           speakers?: Json | null
           status?: string | null
           timestamps?: Json | null
@@ -109,6 +246,9 @@ export type Database = {
           created_at?: string | null
           full_text?: string | null
           id?: string
+          keywords?: string[] | null
+          quotes?: string[] | null
+          sentiment_timeline?: Json | null
           speakers?: Json | null
           status?: string | null
           timestamps?: Json | null

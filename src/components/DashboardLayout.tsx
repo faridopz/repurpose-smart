@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { User, Session } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Video, FileText, Sparkles, BarChart3, Settings, LogOut } from "lucide-react";
+import { Video, FileText, Sparkles, BarChart3, Settings, LogOut, Film } from "lucide-react";
 import { toast } from "sonner";
 import UploadTab from "./tabs/UploadTab";
 import TranscriptsTab from "./tabs/TranscriptsTab";
@@ -85,7 +85,7 @@ export default function DashboardLayout() {
 
       <main className="container mx-auto px-4 py-8">
         <Tabs defaultValue="uploads" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5 lg:w-auto lg:inline-grid">
+          <TabsList className="grid w-full grid-cols-6 lg:w-auto lg:inline-grid">
             <TabsTrigger value="uploads" className="gap-2">
               <Video className="h-4 w-4" />
               <span className="hidden sm:inline">Uploads</span>
@@ -97,6 +97,12 @@ export default function DashboardLayout() {
             <TabsTrigger value="ai-content" className="gap-2">
               <Sparkles className="h-4 w-4" />
               <span className="hidden sm:inline">AI Content</span>
+            </TabsTrigger>
+            <TabsTrigger value="clips" className="gap-2" asChild>
+              <a href="/clips">
+                <Film className="h-4 w-4" />
+                <span className="hidden sm:inline">Clips</span>
+              </a>
             </TabsTrigger>
             <TabsTrigger value="analytics" className="gap-2">
               <BarChart3 className="h-4 w-4" />

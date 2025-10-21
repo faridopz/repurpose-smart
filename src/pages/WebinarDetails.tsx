@@ -1,16 +1,20 @@
+import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, FileText, Sparkles } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { Badge } from "@/components/ui/badge";
+import { ArrowLeft, Loader2, FileText, Sparkles, Film } from "lucide-react";
+import { toast } from "sonner";
+import ContentGenerationModal from "@/components/ContentGenerationModal";
 
 export default function WebinarDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { toast } = useToast();
+  const [showGenerateModal, setShowGenerateModal] = useState(false);
+  const [transcribing, setTranscribing] = useState(false);
 
   const { data: webinar, isLoading } = useQuery({
     queryKey: ["webinar", id],
@@ -26,8 +30,9 @@ export default function WebinarDetails() {
     },
   });
 
-  const { data: transcript } = useQuery({
+  const { data: transcript, refetch: refetchTranscript } = useQuery({
     queryKey: ["transcript", id],
+    enabled: !!id,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("transcripts")
@@ -40,8 +45,9 @@ export default function WebinarDetails() {
     },
   });
 
-  const { data: aiContent } = useQuery({
+  const { data: aiContent, refetch: refetchAiContent } = useQuery({
     queryKey: ["ai-content", id],
+    enabled: !!id,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("ai_content")
@@ -52,6 +58,57 @@ export default function WebinarDetails() {
       return data;
     },
   });
+
+  const { data: snippets } = useQuery({
+    queryKey: ["snippets", id],
+    enabled: !!id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("snippets")
+        .select("*")
+        .eq("webinar_id", id)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const handleStartTranscription = async () => {
+    setTranscribing(true);
+    try {
+      const { error } = await supabase.functions.invoke('transcribe-webinar', {
+        body: { webinarId: id }
+      });
+
+      if (error) throw error;
+
+      toast.success("Transcription started!");
+      setTimeout(() => {
+        refetchTranscript();
+      }, 2000);
+    } catch (error: any) {
+      toast.error(error.message || "Failed to start transcription");
+    } finally {
+      setTranscribing(false);
+    }
+  };
+
+  const handleSuggestHighlights = async () => {
+    try {
+      toast.info("Analyzing webinar for highlights...");
+      const { error } = await supabase.functions.invoke('suggest-highlights', {
+        body: { webinarId: id }
+      });
+
+      if (error) throw error;
+
+      toast.success("Highlights suggested! Check the Clips page");
+      navigate('/clips');
+    } catch (error: any) {
+      toast.error(error.message || "Failed to suggest highlights");
+    }
+  };
 
   if (isLoading) {
     return (
@@ -81,14 +138,41 @@ export default function WebinarDetails() {
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8">
-        <Button
-          variant="ghost"
-          onClick={() => navigate("/dashboard")}
-          className="mb-6"
-        >
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Dashboard
-        </Button>
+        <div className="mb-6 space-y-4">
+          <div className="flex gap-4 flex-wrap">
+            <Button variant="outline" onClick={() => navigate("/dashboard")}>
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to Dashboard
+            </Button>
+            {transcript && (
+              <>
+                <Button onClick={() => setShowGenerateModal(true)}>
+                  <Sparkles className="mr-2 h-4 w-4" />
+                  Generate Content
+                </Button>
+                <Button variant="outline" onClick={handleSuggestHighlights}>
+                  <Film className="mr-2 h-4 w-4" />
+                  Suggest Highlights
+                </Button>
+              </>
+            )}
+            {!transcript && webinar?.status === 'uploaded' && (
+              <Button onClick={handleStartTranscription} disabled={transcribing}>
+                {transcribing ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Starting...
+                  </>
+                ) : (
+                  <>
+                    <FileText className="mr-2 h-4 w-4" />
+                    Start Transcription
+                  </>
+                )}
+              </Button>
+            )}
+          </div>
+        </div>
 
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">{webinar.title}</h1>
@@ -191,37 +275,86 @@ export default function WebinarDetails() {
           </TabsContent>
 
           <TabsContent value="ai-content" className="mt-6">
-            {aiContent && aiContent.length > 0 ? (
-              <div className="space-y-6">
-                {aiContent.map((content) => (
-                  <Card key={content.id}>
-                    <CardHeader>
-                      <CardTitle className="capitalize">{content.content_type}</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="prose prose-invert max-w-none">
-                        <p className="whitespace-pre-wrap">{content.content}</p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            ) : (
-              <Card>
-                <CardContent className="py-12">
-                  <div className="text-center">
+            <Card>
+              <CardHeader>
+                <CardTitle>AI-Generated Content</CardTitle>
+                <CardDescription>Content generated from transcript</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {!aiContent || aiContent.length === 0 ? (
+                  <div className="text-center py-8">
                     <Sparkles className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold mb-2">No AI Content Yet</h3>
-                    <p className="text-muted-foreground mb-4">
-                      AI-generated content will appear here once created
-                    </p>
+                    <p className="text-muted-foreground mb-4">No AI content generated yet</p>
+                    {transcript && (
+                      <Button onClick={() => setShowGenerateModal(true)}>
+                        <Sparkles className="mr-2 h-4 w-4" />
+                        Generate Content
+                      </Button>
+                    )}
                   </div>
+                ) : (
+                  <div className="space-y-4">
+                    {aiContent.map((content: any) => (
+                      <div key={content.id} className="p-4 border rounded-lg space-y-2">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <Badge variant="secondary">{content.content_type}</Badge>
+                          {content.platform && <Badge variant="outline">{content.platform}</Badge>}
+                          {content.tone && <Badge variant="outline">{content.tone}</Badge>}
+                        </div>
+                        <p className="text-sm whitespace-pre-wrap line-clamp-4">
+                          {typeof content.content === 'string' 
+                            ? content.content 
+                            : JSON.stringify(content.content, null, 2)}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {snippets && snippets.length > 0 && (
+              <Card className="mt-6">
+                <CardHeader>
+                  <CardTitle>Suggested Highlights</CardTitle>
+                  <CardDescription>{snippets.length} clips suggested</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {snippets.slice(0, 3).map((snippet: any) => (
+                      <div key={snippet.id} className="p-3 border rounded-lg">
+                        <div className="flex items-start justify-between mb-2">
+                          <p className="text-sm font-medium">{snippet.reason}</p>
+                          <Badge variant="secondary">{snippet.status}</Badge>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          {Math.floor(snippet.start_time / 60)}:{String(Math.floor(snippet.start_time % 60)).padStart(2, '0')} - {Math.floor(snippet.end_time / 60)}:{String(Math.floor(snippet.end_time % 60)).padStart(2, '0')}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                  <Button variant="outline" className="w-full mt-4" onClick={() => navigate('/clips')}>
+                    <Film className="mr-2 h-4 w-4" />
+                    View All Clips
+                  </Button>
                 </CardContent>
               </Card>
             )}
           </TabsContent>
         </Tabs>
       </div>
+
+      {webinar && (
+        <ContentGenerationModal
+          open={showGenerateModal}
+          onOpenChange={(open) => {
+            setShowGenerateModal(open);
+            if (!open) refetchAiContent();
+          }}
+          webinarId={webinar.id}
+          webinarTitle={webinar.title}
+        />
+      )}
     </div>
   );
 }

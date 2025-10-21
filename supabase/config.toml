@@ -1,1 +1,10 @@
 project_id = "xshzsgynchzjwbvsiyqc"
+
+[functions.transcribe-webinar]
+verify_jwt = false
+
+[functions.generate-content]
+verify_jwt = false
+
+[functions.suggest-highlights]
+verify_jwt = false

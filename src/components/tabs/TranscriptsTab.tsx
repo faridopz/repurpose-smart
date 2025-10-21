@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
+import EmptyState from "@/components/EmptyState";
 
 interface TranscriptsTabProps {
   userId: string;
@@ -49,6 +50,18 @@ export default function TranscriptsTab({ userId }: TranscriptsTabProps) {
     );
   }
 
+  if (!transcripts || transcripts.length === 0) {
+    return (
+      <EmptyState
+        icon={FileText}
+        title="No Transcripts Yet"
+        description="Upload your first webinar recording to automatically generate AI-powered transcripts with speaker detection, timestamps, and key insights."
+        actionLabel="Upload Webinar"
+        onAction={() => navigate("/dashboard")}
+      />
+    );
+  }
+
   return (
     <Card>
       <CardHeader>
@@ -56,56 +69,46 @@ export default function TranscriptsTab({ userId }: TranscriptsTabProps) {
         <CardDescription>View and manage webinar transcriptions</CardDescription>
       </CardHeader>
       <CardContent>
-        {!transcripts || transcripts.length === 0 ? (
-          <div className="text-center py-12">
-            <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No Transcripts Yet</h3>
-            <p className="text-muted-foreground">
-              Upload a webinar to generate transcripts automatically
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {transcripts.map((transcript: any) => (
-              <div
-                key={transcript.id}
-                className="p-4 border rounded-lg hover:border-primary/50 transition-colors"
-              >
-                <div className="flex items-start justify-between mb-2">
-                  <div>
-                    <h4 className="font-semibold">
-                      {transcript.webinars?.title || "Untitled Webinar"}
-                    </h4>
-                    <p className="text-sm text-muted-foreground">
-                      {new Date(transcript.created_at).toLocaleDateString()}
-                    </p>
-                  </div>
-                  <span
-                    className={`text-xs px-2 py-1 rounded capitalize ${
-                      transcript.status === "completed"
-                        ? "bg-green-500/10 text-green-500"
-                        : "bg-yellow-500/10 text-yellow-500"
-                    }`}
-                  >
-                    {transcript.status}
-                  </span>
-                </div>
-                {transcript.full_text && (
-                  <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
-                    {transcript.full_text}
+        <div className="space-y-4">
+          {transcripts.map((transcript: any) => (
+            <div
+              key={transcript.id}
+              className="p-4 border rounded-lg hover:border-primary/50 transition-colors"
+            >
+              <div className="flex items-start justify-between mb-2">
+                <div>
+                  <h4 className="font-semibold">
+                    {transcript.webinars?.title || "Untitled Webinar"}
+                  </h4>
+                  <p className="text-sm text-muted-foreground">
+                    {new Date(transcript.created_at).toLocaleDateString()}
                   </p>
-                )}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => navigate(`/webinar/${transcript.webinar_id}`)}
+                </div>
+                <span
+                  className={`text-xs px-2 py-1 rounded capitalize ${
+                    transcript.status === "completed"
+                      ? "bg-green-500/10 text-green-500"
+                      : "bg-yellow-500/10 text-yellow-500"
+                  }`}
                 >
-                  View Details
-                </Button>
+                  {transcript.status}
+                </span>
               </div>
-            ))}
-          </div>
-        )}
+              {transcript.full_text && (
+                <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
+                  {transcript.full_text}
+                </p>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate(`/webinar/${transcript.webinar_id}`)}
+              >
+                View Details
+              </Button>
+            </div>
+          ))}
+        </div>
       </CardContent>
     </Card>
   );

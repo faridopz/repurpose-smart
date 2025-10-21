@@ -16,6 +16,7 @@ export default function DashboardLayout() {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState("uploads");
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -64,54 +65,94 @@ export default function DashboardLayout() {
   if (!user) return null;
 
   return (
-    <div className="min-h-screen bg-gradient-subtle">
-      <header className="border-b bg-card">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="p-2 bg-gradient-primary rounded-lg">
-              <Video className="h-6 w-6 text-primary-foreground" />
+    <div className="min-h-screen bg-background">
+      <header className="sticky top-0 z-50 border-b bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80">
+        <div className="container mx-auto px-4 py-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-primary rounded-lg">
+                <Video className="h-5 w-5 text-primary-foreground" />
+              </div>
+              <div>
+                <h1 className="text-xl font-bold">WebinarAI</h1>
+                <p className="text-xs text-muted-foreground">Transform webinars into content</p>
+              </div>
             </div>
-            <h1 className="text-2xl font-bold">WebinarAI</h1>
-          </div>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-muted-foreground">{user.email}</span>
-            <Button variant="ghost" size="sm" onClick={handleSignOut}>
-              <LogOut className="h-4 w-4 mr-2" />
-              Sign Out
-            </Button>
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-muted-foreground hidden md:inline">{user.email}</span>
+              <Button variant="ghost" size="sm" onClick={handleSignOut}>
+                <LogOut className="h-4 w-4 mr-2" />
+                <span className="hidden sm:inline">Sign Out</span>
+              </Button>
+            </div>
           </div>
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8">
-        <Tabs defaultValue="uploads" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6 lg:w-auto lg:inline-grid">
-            <TabsTrigger value="uploads" className="gap-2">
-              <Video className="h-4 w-4" />
-              <span className="hidden sm:inline">Uploads</span>
-            </TabsTrigger>
-            <TabsTrigger value="transcripts" className="gap-2">
-              <FileText className="h-4 w-4" />
-              <span className="hidden sm:inline">Transcripts</span>
-            </TabsTrigger>
-            <TabsTrigger value="ai-content" className="gap-2">
-              <Sparkles className="h-4 w-4" />
-              <span className="hidden sm:inline">AI Content</span>
-            </TabsTrigger>
-            <TabsTrigger value="clips" className="gap-2" asChild>
-              <a href="/clips">
-                <Film className="h-4 w-4" />
-                <span className="hidden sm:inline">Clips</span>
-              </a>
-            </TabsTrigger>
-            <TabsTrigger value="analytics" className="gap-2">
-              <BarChart3 className="h-4 w-4" />
-              <span className="hidden sm:inline">Analytics</span>
-            </TabsTrigger>
-            <TabsTrigger value="settings" className="gap-2">
-              <Settings className="h-4 w-4" />
-              <span className="hidden sm:inline">Settings</span>
-            </TabsTrigger>
+      <main className="container mx-auto px-4 py-6 max-w-7xl">
+        {/* Process Flow Guide */}
+        <div className="mb-8 bg-card border rounded-lg p-6">
+          <h2 className="text-sm font-semibold text-muted-foreground mb-4">YOUR WORKFLOW</h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <button
+              onClick={() => setActiveTab("uploads")}
+              className={`flex flex-col items-center p-4 rounded-lg border-2 transition-all hover:scale-105 ${
+                activeTab === "uploads" ? "border-primary bg-primary/10" : "border-border hover:border-primary/50"
+              }`}
+            >
+              <div className={`p-3 rounded-full mb-2 ${activeTab === "uploads" ? "bg-primary text-primary-foreground" : "bg-muted"}`}>
+                <Video className="h-5 w-5" />
+              </div>
+              <span className="font-semibold text-sm">1. Upload</span>
+              <span className="text-xs text-muted-foreground text-center">Start with your webinar</span>
+            </button>
+            
+            <button
+              onClick={() => setActiveTab("transcripts")}
+              className={`flex flex-col items-center p-4 rounded-lg border-2 transition-all hover:scale-105 ${
+                activeTab === "transcripts" ? "border-primary bg-primary/10" : "border-border hover:border-primary/50"
+              }`}
+            >
+              <div className={`p-3 rounded-full mb-2 ${activeTab === "transcripts" ? "bg-primary text-primary-foreground" : "bg-muted"}`}>
+                <FileText className="h-5 w-5" />
+              </div>
+              <span className="font-semibold text-sm">2. Transcribe</span>
+              <span className="text-xs text-muted-foreground text-center">AI extracts insights</span>
+            </button>
+            
+            <button
+              onClick={() => setActiveTab("ai-content")}
+              className={`flex flex-col items-center p-4 rounded-lg border-2 transition-all hover:scale-105 ${
+                activeTab === "ai-content" ? "border-primary bg-primary/10" : "border-border hover:border-primary/50"
+              }`}
+            >
+              <div className={`p-3 rounded-full mb-2 ${activeTab === "ai-content" ? "bg-primary text-primary-foreground" : "bg-muted"}`}>
+                <Sparkles className="h-5 w-5" />
+              </div>
+              <span className="font-semibold text-sm">3. Generate</span>
+              <span className="text-xs text-muted-foreground text-center">Create social content</span>
+            </button>
+            
+            <button
+              onClick={() => navigate("/clips")}
+              className="flex flex-col items-center p-4 rounded-lg border-2 transition-all hover:scale-105 border-border hover:border-primary/50"
+            >
+              <div className="p-3 rounded-full mb-2 bg-muted">
+                <Film className="h-5 w-5" />
+              </div>
+              <span className="font-semibold text-sm">4. Create Clips</span>
+              <span className="text-xs text-muted-foreground text-center">Short highlight videos</span>
+            </button>
+          </div>
+        </div>
+
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <TabsList className="hidden">
+            <TabsTrigger value="uploads">Uploads</TabsTrigger>
+            <TabsTrigger value="transcripts">Transcripts</TabsTrigger>
+            <TabsTrigger value="ai-content">AI Content</TabsTrigger>
+            <TabsTrigger value="analytics">Analytics</TabsTrigger>
+            <TabsTrigger value="settings">Settings</TabsTrigger>
           </TabsList>
 
           <TabsContent value="uploads">

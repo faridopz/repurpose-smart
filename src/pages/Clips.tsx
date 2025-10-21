@@ -10,12 +10,15 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Label } from "@/components/ui/label";
 import { Loader2, Film, Plus, Search, Download, Folder, Tag } from "lucide-react";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
+import EmptyState from "@/components/EmptyState";
 
 export default function Clips() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCollection, setSelectedCollection] = useState<string | null>(null);
   const [newCollectionName, setNewCollectionName] = useState("");
   const [creatingCollection, setCreatingCollection] = useState(false);
+  const navigate = useNavigate();
 
   const { data: user } = useQuery({
     queryKey: ["user"],
@@ -112,7 +115,7 @@ export default function Clips() {
 
   if (snippetsLoading) {
     return (
-      <div className="container mx-auto p-6">
+      <div className="min-h-screen bg-background">
         <div className="flex items-center justify-center py-12">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
@@ -120,59 +123,108 @@ export default function Clips() {
     );
   }
 
-  return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Clip Library</h1>
-          <p className="text-muted-foreground">Manage your video highlights and clips</p>
-        </div>
-        
-        <Dialog>
-          <DialogTrigger asChild>
-            <Button>
-              <Folder className="mr-2 h-4 w-4" />
-              New Collection
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Create Collection</DialogTitle>
-              <DialogDescription>
-                Organize your clips into collections
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="collectionName">Collection Name</Label>
-                <Input
-                  id="collectionName"
-                  value={newCollectionName}
-                  onChange={(e) => setNewCollectionName(e.target.value)}
-                  placeholder="e.g., Launch Campaign"
-                />
-              </div>
-              <Button 
-                onClick={handleCreateCollection} 
-                disabled={creatingCollection || !newCollectionName.trim()}
-                className="w-full"
-              >
-                {creatingCollection ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Creating...
-                  </>
-                ) : (
-                  <>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Create Collection
-                  </>
-                )}
+  if (!snippets || snippets.length === 0) {
+    return (
+      <div className="min-h-screen bg-background">
+        <header className="border-b bg-card">
+          <div className="container mx-auto px-4 py-4">
+            <div className="flex items-center gap-3">
+              <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")}>
+                ← Back to Dashboard
               </Button>
+              <div className="p-2 bg-primary rounded-lg">
+                <Film className="h-5 w-5 text-primary-foreground" />
+              </div>
+              <h1 className="text-xl font-bold">Clips Library</h1>
             </div>
-          </DialogContent>
-        </Dialog>
+          </div>
+        </header>
+        
+        <main className="container mx-auto px-4 py-8 max-w-7xl">
+          <EmptyState
+            icon={Film}
+            title="No Video Clips Yet"
+            description="Create engaging short-form video clips from your webinar highlights. AI automatically suggests the best moments based on sentiment, key topics, and speaker emphasis. Perfect for social media!"
+            actionLabel="View Webinars"
+            onAction={() => navigate("/dashboard")}
+            secondaryActionLabel="Upload New Webinar"
+            onSecondaryAction={() => navigate("/dashboard")}
+          />
+        </main>
       </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-background">
+      <header className="border-b bg-card">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")}>
+                ← Back to Dashboard
+              </Button>
+              <div className="p-2 bg-primary rounded-lg">
+                <Film className="h-5 w-5 text-primary-foreground" />
+              </div>
+              <h1 className="text-xl font-bold">Clips Library</h1>
+            </div>
+            <Badge variant="secondary">{snippets.length} clips</Badge>
+          </div>
+        </div>
+      </header>
+
+      <main className="container mx-auto px-4 py-6 max-w-7xl">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <p className="text-muted-foreground">Manage your video highlights and clips</p>
+          </div>
+          
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button>
+                <Folder className="mr-2 h-4 w-4" />
+                New Collection
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Create Collection</DialogTitle>
+                <DialogDescription>
+                  Organize your clips into collections
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="collectionName">Collection Name</Label>
+                  <Input
+                    id="collectionName"
+                    value={newCollectionName}
+                    onChange={(e) => setNewCollectionName(e.target.value)}
+                    placeholder="e.g., Launch Campaign"
+                  />
+                </div>
+                <Button 
+                  onClick={handleCreateCollection} 
+                  disabled={creatingCollection || !newCollectionName.trim()}
+                  className="w-full"
+                >
+                  {creatingCollection ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Creating...
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="mr-2 h-4 w-4" />
+                      Create Collection
+                    </>
+                  )}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
 
       {collections && collections.length > 0 && (
         <div className="flex gap-2 flex-wrap">
@@ -315,6 +367,7 @@ export default function Clips() {
           )}
         </TabsContent>
       </Tabs>
+      </main>
     </div>
   );
 }

@@ -71,3 +71,36 @@ Yes, you can!
 To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
 
 Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+
+## WebinarAI - Project Overview
+
+WebinarAI is a full-stack platform that transforms webinar recordings into actionable content using AI.
+
+### Features
+- **Authentication**: Secure email/password signup and login
+- **Webinar Upload**: Support for MP4/MP3 files via cloud storage
+- **AI Transcription**: Automatic transcription with AssemblyAI integration
+- **AI Content Generation**: Create blogs, social posts, and summaries using OpenAI GPT-4
+- **Analytics Dashboard**: Track content performance and engagement
+- **Dark Theme**: Modern black (#0B0B0D) and orange (#FF7A00) design
+
+### Architecture
+- **Frontend**: React + TypeScript + TailwindCSS
+- **Backend**: Lovable Cloud (Supabase)
+- **Database**: PostgreSQL with Row Level Security
+- **Storage**: Secure file storage with Supabase Storage
+- **AI Services**: AssemblyAI (transcription) + OpenAI GPT-4 (generation)
+
+### Database Schema
+- `profiles`: User settings and preferences
+- `webinars`: Uploaded files and metadata
+- `transcripts`: Transcription data with timestamps
+- `ai_content`: Generated blogs, posts, and summaries
+
+### Deployment
+This project is deployed on Lovable and uses Lovable Cloud for backend services. All environment variables and API keys are securely managed through the Lovable Cloud integration.
+
+To deploy updates:
+1. Make changes in Lovable editor
+2. Click "Publish" in the top right
+3. Your app is live at your custom domain or Lovable subdomain

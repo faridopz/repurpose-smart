@@ -4,9 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, Key, Info } from "lucide-react";
 
 interface SettingsTabProps {
   userId: string;
@@ -108,6 +109,43 @@ export default function SettingsTab({ userId }: SettingsTabProps) {
               "Save Settings"
             )}
           </Button>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Key className="h-5 w-5" />
+            API Configuration
+          </CardTitle>
+          <CardDescription>Manage API integrations for transcription and AI generation</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <Alert>
+            <Info className="h-4 w-4" />
+            <AlertDescription>
+              API keys are securely managed at the backend level for all users. If you need to use your own 
+              AssemblyAI or OpenAI keys, please contact support for enterprise options.
+            </AlertDescription>
+          </Alert>
+          
+          <div className="space-y-3">
+            <div className="flex items-center justify-between p-3 border rounded-lg">
+              <div>
+                <p className="font-medium">AssemblyAI</p>
+                <p className="text-sm text-muted-foreground">Transcription service</p>
+              </div>
+              <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded">Backend Managed</span>
+            </div>
+            
+            <div className="flex items-center justify-between p-3 border rounded-lg">
+              <div>
+                <p className="font-medium">OpenAI GPT-4</p>
+                <p className="text-sm text-muted-foreground">AI content generation</p>
+              </div>
+              <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded">Backend Managed</span>
+            </div>
+          </div>
         </CardContent>
       </Card>
     </div>

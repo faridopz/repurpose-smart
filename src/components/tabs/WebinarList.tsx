@@ -1,10 +1,11 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FileVideo, Trash2, Clock } from "lucide-react";
+import { FileVideo, Trash2, Clock, Eye } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
+import { useNavigate } from "react-router-dom";
 
 interface Webinar {
   id: string;
@@ -24,6 +25,7 @@ interface WebinarListProps {
 
 export default function WebinarList({ webinars, isLoading, userId }: WebinarListProps) {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   const handleDelete = async (webinarId: string, fileUrl: string) => {
     if (!confirm("Are you sure you want to delete this webinar?")) return;
@@ -107,13 +109,22 @@ export default function WebinarList({ webinars, isLoading, userId }: WebinarList
                   </div>
                 </div>
               </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => handleDelete(webinar.id, webinar.file_url)}
-              >
-                <Trash2 className="h-4 w-4 text-destructive" />
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => navigate(`/webinar/${webinar.id}`)}
+                >
+                  <Eye className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleDelete(webinar.id, webinar.file_url)}
+                >
+                  <Trash2 className="h-4 w-4 text-destructive" />
+                </Button>
+              </div>
             </div>
           ))}
         </div>

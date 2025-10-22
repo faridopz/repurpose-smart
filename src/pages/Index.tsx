@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Video, Sparkles, FileText, Mic, GraduationCap, Users, TrendingUp, BookOpen } from "lucide-react";
+import { Video, Sparkles, FileText, Mic, GraduationCap, Users, TrendingUp, BookOpen, Upload, Brain, Zap, Target, Clock, CheckCircle, ArrowRight } from "lucide-react";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -59,49 +59,320 @@ const Index = () => {
           </div>
         </div>
 
-        {/* How It Works */}
-        <div className="mt-24 max-w-5xl mx-auto">
-          <h2 className="text-3xl font-bold text-center mb-4">How It Works</h2>
-          <p className="text-muted-foreground text-center mb-12 text-lg">Get content-ready assets in 3 simple steps</p>
+        {/* About Section */}
+        <div className="mt-24 max-w-6xl mx-auto">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+              About <span className="text-primary">ContentKlipa</span>
+            </h2>
+            <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+              The AI-powered platform that transforms hours of content into days of social media posts
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-8 items-center">
+            <div className="space-y-6">
+              <div className="space-y-4">
+                <h3 className="text-2xl font-bold">The Problem We Solve</h3>
+                <p className="text-muted-foreground leading-relaxed">
+                  You spend hours creating valuable long-form content — webinars, podcasts, interviews, courses. But after publishing, that content sits unused while you struggle to keep up with daily social media demands.
+                </p>
+                <p className="text-muted-foreground leading-relaxed">
+                  Manual repurposing is time-consuming, expensive, and requires multiple tools. Most creators end up leaving 90% of their best content value untapped.
+                </p>
+              </div>
+
+              <div className="space-y-4 pt-4">
+                <h3 className="text-2xl font-bold">Our Solution</h3>
+                <p className="text-muted-foreground leading-relaxed">
+                  ContentKlipa uses advanced AI to automatically extract the most engaging moments, generate platform-optimized content, and create viral-ready clips — all from a single upload.
+                </p>
+                <div className="space-y-3 pt-2">
+                  <div className="flex items-start gap-3">
+                    <CheckCircle className="h-5 w-5 text-primary shrink-0 mt-1" />
+                    <div>
+                      <p className="font-medium">Smart AI Analysis</p>
+                      <p className="text-sm text-muted-foreground">Identifies sentiment peaks, key topics, and quotable moments</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <CheckCircle className="h-5 w-5 text-primary shrink-0 mt-1" />
+                    <div>
+                      <p className="font-medium">Platform Optimization</p>
+                      <p className="text-sm text-muted-foreground">Tailored content for LinkedIn, Twitter, Instagram, TikTok</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <CheckCircle className="h-5 w-5 text-primary shrink-0 mt-1" />
+                    <div>
+                      <p className="font-medium">Time Multiplier</p>
+                      <p className="text-sm text-muted-foreground">Turn 1 hour of content into 30+ days of social posts</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <Card className="border-primary/20 bg-gradient-to-br from-orange-500/5 to-amber-400/5">
+                <CardHeader>
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="p-2 bg-gradient-primary rounded-lg">
+                      <Target className="h-6 w-6 text-white" />
+                    </div>
+                    <CardTitle>For Creators & Educators</CardTitle>
+                  </div>
+                  <CardDescription>
+                    Stop spending hours editing clips and writing posts. Focus on creating great content while ContentKlipa handles the distribution.
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+
+              <Card className="border-primary/20 bg-gradient-to-br from-orange-500/5 to-amber-400/5">
+                <CardHeader>
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="p-2 bg-gradient-primary rounded-lg">
+                      <TrendingUp className="h-6 w-6 text-white" />
+                    </div>
+                    <CardTitle>For Marketers & Businesses</CardTitle>
+                  </div>
+                  <CardDescription>
+                    Maximize ROI from your content investments. Every webinar, demo, or event becomes a content library that keeps working for months.
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+
+              <Card className="border-primary/20 bg-gradient-to-br from-orange-500/5 to-amber-400/5">
+                <CardHeader>
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="p-2 bg-gradient-primary rounded-lg">
+                      <Zap className="h-6 w-6 text-white" />
+                    </div>
+                    <CardTitle>For Agencies & Teams</CardTitle>
+                  </div>
+                  <CardDescription>
+                    Scale your content production without scaling headcount. Deliver more value to clients with faster turnarounds.
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+            </div>
+          </div>
+        </div>
+
+        {/* How It Works - Enhanced */}
+        <div className="mt-24 max-w-6xl mx-auto">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">How It Works</h2>
+            <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
+              From upload to published content in minutes — here's the complete workflow
+            </p>
+          </div>
           
-          <div className="grid md:grid-cols-3 gap-8">
-            <div className="bg-card rounded-xl p-8 border shadow-md hover:shadow-xl transition-all relative">
-              <div className="absolute -top-4 -left-4 w-12 h-12 bg-gradient-primary rounded-full flex items-center justify-center text-white font-bold text-xl shadow-lg">
-                1
+          {/* Step-by-step workflow */}
+          <div className="space-y-12">
+            {/* Step 1 */}
+            <div className="flex flex-col md:flex-row gap-8 items-center">
+              <div className="md:w-1/2 order-2 md:order-1">
+                <div className="inline-flex items-center gap-3 mb-4">
+                  <div className="w-12 h-12 bg-gradient-primary rounded-full flex items-center justify-center text-white font-bold text-xl">
+                    1
+                  </div>
+                  <h3 className="text-2xl font-bold">Upload Your Content</h3>
+                </div>
+                <p className="text-muted-foreground text-lg mb-4 leading-relaxed">
+                  Simply drag and drop your video or audio file. We support all major formats including MP4, MP3, MOV, and WAV.
+                </p>
+                <ul className="space-y-2">
+                  <li className="flex items-start gap-2">
+                    <CheckCircle className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+                    <span className="text-sm">Support for files up to 1GB</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+                    <span className="text-sm">Automatic format detection</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+                    <span className="text-sm">Secure cloud storage</span>
+                  </li>
+                </ul>
               </div>
-              <div className="p-3 bg-primary/10 rounded-lg w-fit mb-4 mt-2">
-                <Video className="h-8 w-8 text-primary" />
+              <div className="md:w-1/2 order-1 md:order-2">
+                <Card className="border-2 border-primary/20 p-8 bg-gradient-to-br from-orange-500/5 to-amber-400/5">
+                  <div className="text-center">
+                    <Upload className="h-16 w-16 mx-auto mb-4 text-primary" />
+                    <p className="text-muted-foreground">Webinars • Podcasts • Interviews</p>
+                    <p className="text-muted-foreground">Courses • Demos • Presentations</p>
+                    <div className="mt-6 pt-6 border-t">
+                      <div className="flex items-center justify-center gap-2">
+                        <Clock className="h-4 w-4 text-primary" />
+                        <span className="text-sm font-medium">Upload time: ~30 seconds</span>
+                      </div>
+                    </div>
+                  </div>
+                </Card>
               </div>
-              <h3 className="text-2xl font-semibold mb-3">Upload Your Content</h3>
-              <p className="text-muted-foreground leading-relaxed">
-                Drop your video or audio file from any source: webinar, podcast episode, interview, online course, conference talk, or presentation.
-              </p>
             </div>
 
-            <div className="bg-card rounded-xl p-8 border shadow-md hover:shadow-xl transition-all relative">
-              <div className="absolute -top-4 -left-4 w-12 h-12 bg-gradient-primary rounded-full flex items-center justify-center text-white font-bold text-xl shadow-lg">
-                2
-              </div>
-              <div className="p-3 bg-accent/10 rounded-lg w-fit mb-4 mt-2">
-                <Sparkles className="h-8 w-8 text-accent" />
-              </div>
-              <h3 className="text-2xl font-semibold mb-3">AI Does the Magic</h3>
-              <p className="text-muted-foreground leading-relaxed">
-                Our AI transcribes, analyzes sentiment, identifies key moments, and generates platform-specific content. All while you grab coffee.
-              </p>
+            <div className="flex justify-center">
+              <ArrowRight className="h-8 w-8 text-primary rotate-90 md:rotate-0" />
             </div>
 
-            <div className="bg-card rounded-xl p-8 border shadow-md hover:shadow-xl transition-all relative">
-              <div className="absolute -top-4 -left-4 w-12 h-12 bg-gradient-primary rounded-full flex items-center justify-center text-white font-bold text-xl shadow-lg">
-                3
+            {/* Step 2 */}
+            <div className="flex flex-col md:flex-row gap-8 items-center">
+              <div className="md:w-1/2">
+                <Card className="border-2 border-primary/20 p-8 bg-gradient-to-br from-orange-500/5 to-amber-400/5">
+                  <div className="text-center space-y-4">
+                    <Brain className="h-16 w-16 mx-auto text-primary" />
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-sm">
+                        <span>Transcribing audio...</span>
+                        <span className="text-primary font-medium">100%</span>
+                      </div>
+                      <div className="flex items-center justify-between text-sm">
+                        <span>Analyzing sentiment...</span>
+                        <span className="text-primary font-medium">100%</span>
+                      </div>
+                      <div className="flex items-center justify-between text-sm">
+                        <span>Identifying highlights...</span>
+                        <span className="text-primary font-medium">100%</span>
+                      </div>
+                      <div className="flex items-center justify-between text-sm">
+                        <span>Generating content...</span>
+                        <span className="text-primary font-medium">100%</span>
+                      </div>
+                    </div>
+                    <div className="pt-4 border-t">
+                      <div className="flex items-center justify-center gap-2">
+                        <Clock className="h-4 w-4 text-primary" />
+                        <span className="text-sm font-medium">Processing time: 2-5 minutes</span>
+                      </div>
+                    </div>
+                  </div>
+                </Card>
               </div>
-              <div className="p-3 bg-success/10 rounded-lg w-fit mb-4 mt-2">
-                <FileText className="h-8 w-8 text-success" />
+              <div className="md:w-1/2">
+                <div className="inline-flex items-center gap-3 mb-4">
+                  <div className="w-12 h-12 bg-gradient-primary rounded-full flex items-center justify-center text-white font-bold text-xl">
+                    2
+                  </div>
+                  <h3 className="text-2xl font-bold">AI Processing</h3>
+                </div>
+                <p className="text-muted-foreground text-lg mb-4 leading-relaxed">
+                  Our advanced AI analyzes every second of your content to extract maximum value.
+                </p>
+                <ul className="space-y-2">
+                  <li className="flex items-start gap-2">
+                    <CheckCircle className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+                    <span className="text-sm"><strong>Transcription:</strong> 99% accuracy with speaker detection</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+                    <span className="text-sm"><strong>Sentiment Analysis:</strong> Identifies emotional peaks & engagement</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+                    <span className="text-sm"><strong>Smart Clips:</strong> AI selects 30-90s viral-ready moments</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+                    <span className="text-sm"><strong>Content Generation:</strong> Platform-specific posts & captions</span>
+                  </li>
+                </ul>
               </div>
-              <h3 className="text-2xl font-semibold mb-3">Copy & Publish</h3>
-              <p className="text-muted-foreground leading-relaxed">
-                Get LinkedIn posts, Twitter threads, Instagram captions, blog articles, and video clips. Just copy and publish — it's that simple.
-              </p>
+            </div>
+
+            <div className="flex justify-center">
+              <ArrowRight className="h-8 w-8 text-primary rotate-90 md:rotate-0" />
+            </div>
+
+            {/* Step 3 */}
+            <div className="flex flex-col md:flex-row gap-8 items-center">
+              <div className="md:w-1/2 order-2 md:order-1">
+                <div className="inline-flex items-center gap-3 mb-4">
+                  <div className="w-12 h-12 bg-gradient-primary rounded-full flex items-center justify-center text-white font-bold text-xl">
+                    3
+                  </div>
+                  <h3 className="text-2xl font-bold">Review & Publish</h3>
+                </div>
+                <p className="text-muted-foreground text-lg mb-4 leading-relaxed">
+                  Get all your content organized and ready to publish across platforms. One-click copy and you're done!
+                </p>
+                <ul className="space-y-2">
+                  <li className="flex items-start gap-2">
+                    <CheckCircle className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+                    <span className="text-sm">10+ ready-to-publish content pieces</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+                    <span className="text-sm">Platform-optimized formatting</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+                    <span className="text-sm">Edit, refine with AI assistant</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+                    <span className="text-sm">Export clips as video files</span>
+                  </li>
+                </ul>
+              </div>
+              <div className="md:w-1/2 order-1 md:order-2">
+                <Card className="border-2 border-primary/20 p-8 bg-gradient-to-br from-orange-500/5 to-amber-400/5">
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-3 p-3 bg-background rounded-lg border">
+                      <FileText className="h-6 w-6 text-primary" />
+                      <div className="flex-1">
+                        <p className="font-medium text-sm">LinkedIn Post</p>
+                        <p className="text-xs text-muted-foreground">Professional tone</p>
+                      </div>
+                      <Button size="sm" variant="outline">Copy</Button>
+                    </div>
+                    <div className="flex items-center gap-3 p-3 bg-background rounded-lg border">
+                      <FileText className="h-6 w-6 text-primary" />
+                      <div className="flex-1">
+                        <p className="font-medium text-sm">Twitter Thread</p>
+                        <p className="text-xs text-muted-foreground">Viral-optimized</p>
+                      </div>
+                      <Button size="sm" variant="outline">Copy</Button>
+                    </div>
+                    <div className="flex items-center gap-3 p-3 bg-background rounded-lg border">
+                      <Video className="h-6 w-6 text-primary" />
+                      <div className="flex-1">
+                        <p className="font-medium text-sm">Smart Clips (5)</p>
+                        <p className="text-xs text-muted-foreground">30-90 seconds each</p>
+                      </div>
+                      <Button size="sm" variant="outline">View</Button>
+                    </div>
+                    <div className="pt-4 border-t text-center">
+                      <p className="text-sm font-medium text-primary">+ Blog post, Instagram captions, and more</p>
+                    </div>
+                  </div>
+                </Card>
+              </div>
+            </div>
+          </div>
+
+          {/* Time Comparison */}
+          <div className="mt-16 bg-gradient-to-br from-orange-500/10 to-amber-400/10 rounded-2xl p-8 border-2 border-primary/20">
+            <h3 className="text-2xl font-bold text-center mb-8">Time Comparison</h3>
+            <div className="grid md:grid-cols-2 gap-8 max-w-3xl mx-auto">
+              <div className="text-center">
+                <div className="text-muted-foreground mb-2">Manual Method</div>
+                <div className="text-5xl font-bold text-muted-foreground mb-2">8-12</div>
+                <div className="text-sm text-muted-foreground">hours per webinar</div>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Transcription, editing, writing, formatting...
+                </p>
+              </div>
+              <div className="text-center">
+                <div className="text-primary mb-2 font-medium">With ContentKlipa</div>
+                <div className="text-5xl font-bold text-primary mb-2">5</div>
+                <div className="text-sm font-medium">minutes per webinar</div>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Upload, process, publish. That's it!
+                </p>
+              </div>
             </div>
           </div>
         </div>
@@ -238,10 +509,26 @@ const Index = () => {
           </div>
         </div>
 
-        {/* CTA */}
-        <div className="mt-20 text-center">
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">Ready to 10x Your Content Output?</h2>
-          <p className="text-xl text-muted-foreground mb-8">Join creators who are turning every webinar into a content goldmine</p>
+        {/* Final CTA */}
+        <div className="mt-24 text-center bg-gradient-to-br from-orange-500/10 to-amber-400/10 rounded-2xl p-12 border-2 border-primary/20">
+          <h2 className="text-3xl md:text-4xl font-bold mb-4">Ready to Transform Your Content Strategy?</h2>
+          <p className="text-xl text-muted-foreground mb-6">
+            Join thousands of creators, educators, and marketers who are maximizing their content value
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-8">
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <CheckCircle className="h-5 w-5 text-primary" />
+              <span>No credit card required</span>
+            </div>
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <CheckCircle className="h-5 w-5 text-primary" />
+              <span>Free to start</span>
+            </div>
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <CheckCircle className="h-5 w-5 text-primary" />
+              <span>Cancel anytime</span>
+            </div>
+          </div>
           <Button size="lg" onClick={() => navigate("/auth")} className="gap-2 px-8 h-14 text-lg bg-gradient-primary hover:opacity-90 shadow-lg">
             Start Creating Content Now — It's Free
           </Button>

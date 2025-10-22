@@ -4,13 +4,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { User, Session } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Video, FileText, Sparkles, BarChart3, Settings, LogOut, Film, Upload } from "lucide-react";
+import { Video, FileText, Sparkles as SparklesIcon, BarChart3, Settings, LogOut, Film, Upload } from "lucide-react";
 import { toast } from "sonner";
 import UploadTab from "./tabs/UploadTab";
 import TranscriptsTab from "./tabs/TranscriptsTab";
 import AIContentTab from "./tabs/AIContentTab";
 import AnalyticsTab from "./tabs/AnalyticsTab";
 import SettingsTab from "./tabs/SettingsTab";
+import RecentOutputsTab from "./tabs/RecentOutputsTab";
 
 export default function DashboardLayout() {
   const [user, setUser] = useState<User | null>(null);
@@ -138,7 +139,7 @@ export default function DashboardLayout() {
               }`}
             >
               <div className={`p-3 rounded-full mb-2 ${activeTab === "ai-content" ? "bg-primary text-primary-foreground" : "bg-muted"}`}>
-                <Sparkles className="h-5 w-5" />
+                <SparklesIcon className="h-5 w-5" />
               </div>
               <span className="font-semibold text-sm">3. Generate</span>
               <span className="text-xs text-muted-foreground text-center">Create social content</span>
@@ -162,6 +163,7 @@ export default function DashboardLayout() {
             <TabsTrigger value="uploads">Uploads</TabsTrigger>
             <TabsTrigger value="transcripts">Transcripts</TabsTrigger>
             <TabsTrigger value="ai-content">AI Content</TabsTrigger>
+            <TabsTrigger value="recent">Recent Outputs</TabsTrigger>
             <TabsTrigger value="analytics">Analytics</TabsTrigger>
             <TabsTrigger value="settings">Settings</TabsTrigger>
           </TabsList>
@@ -176,6 +178,10 @@ export default function DashboardLayout() {
 
           <TabsContent value="ai-content">
             <AIContentTab userId={user.id} />
+          </TabsContent>
+
+          <TabsContent value="recent">
+            <RecentOutputsTab userId={user.id} />
           </TabsContent>
 
           <TabsContent value="analytics">

@@ -43,6 +43,74 @@ export default function SmartUploadFlow({ userId }: SmartUploadFlowProps) {
     }
   };
 
+  const pollTranscription = async (transcriptId: string, webinarId: string) => {
+    let attempts = 0;
+    const maxAttempts = 120; // 10 minutes max (5s intervals)
+    
+    const poll = async (): Promise<void> => {
+      if (attempts >= maxAttempts) {
+        throw new Error('Transcription timeout');
+      }
+
+      const { data, error } = await supabase.functions.invoke('poll-transcription', {
+        body: { transcriptId }
+      });
+
+      if (error) throw error;
+
+      if (data.status === 'completed') {
+        setProgress(75);
+        setStep("analyzing");
+
+        // Suggest highlights
+        await supabase.functions.invoke('suggest-highlights', {
+          body: { webinarId }
+        });
+
+        setProgress(85);
+        setStep("generating");
+
+        // Generate content
+        await supabase.functions.invoke('generate-content', {
+          body: {
+            webinarId,
+            platforms: ['linkedin', 'twitter'],
+            tone: 'professional'
+          }
+        });
+
+        setProgress(100);
+        setStep("success");
+
+        // Trigger AI assistant with automatic suggestions
+        setTimeout(() => {
+          const { openAIAssistant } = require("@/components/AIAssistant");
+          openAIAssistant(
+            `Successfully processed webinar "${title}"! Now suggest:\n\n1. 3 blog post titles for A/B testing\n2. 3 social media caption variations (LinkedIn & Twitter)\n3. Best posting times for maximum engagement\n\nKeep suggestions actionable and platform-specific.`,
+            { webinarTitle: title }
+          );
+        }, 1000);
+
+        // Redirect after success
+        setTimeout(() => {
+          navigate(`/webinar/${webinarId}`);
+        }, 2000);
+      } else if (data.status === 'error') {
+        throw new Error('Transcription failed');
+      } else {
+        // Update progress based on time elapsed
+        const progressValue = Math.min(70, 60 + (attempts * 0.5));
+        setProgress(progressValue);
+        
+        attempts++;
+        await new Promise(resolve => setTimeout(resolve, 5000));
+        await poll();
+      }
+    };
+
+    await poll();
+  };
+
   const startProcessing = async () => {
     if (!file || !title) {
       toast.error("Please provide a title and select a file");
@@ -65,7 +133,7 @@ export default function SmartUploadFlow({ userId }: SmartUploadFlowProps) {
         .from("webinars")
         .getPublicUrl(filePath);
 
-      setProgress(25);
+      setProgress(30);
 
       const { data: webinar, error: dbError } = await supabase
         .from("webinars")
@@ -83,54 +151,20 @@ export default function SmartUploadFlow({ userId }: SmartUploadFlowProps) {
       if (dbError) throw dbError;
       setWebinarId(webinar.id);
 
-      // Step 2: Transcribe
-      setProgress(40);
-      await supabase.functions.invoke("transcribe-webinar", {
+      setProgress(50);
+
+      // Step 2: Start transcription
+      const { data: transcriptData, error: transcriptError } = await supabase.functions.invoke("transcribe-webinar", {
         body: { webinarId: webinar.id },
       });
+
+      if (transcriptError) throw transcriptError;
 
       setProgress(60);
-      setStep("analyzing");
 
-      // Wait for transcript to be ready
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-      setProgress(75);
+      // Start polling for transcription completion
+      await pollTranscription(transcriptData.transcriptId, webinar.id);
 
-      // Step 3: Suggest Highlights
-      setStep("generating");
-      await supabase.functions.invoke("suggest-highlights", {
-        body: { webinarId: webinar.id },
-      });
-
-      setProgress(90);
-
-      // Step 4: Generate Content
-      await supabase.functions.invoke("generate-content", {
-        body: {
-          webinarId: webinar.id,
-          platforms: ["linkedin", "twitter", "blog"],
-          tone: "professional",
-        },
-      });
-
-      setProgress(100);
-      setStep("success");
-
-      // Trigger AI assistant with automatic suggestions
-      setTimeout(() => {
-        const { openAIAssistant } = require("@/components/AIAssistant");
-        openAIAssistant(
-          `The webinar "${title}" has been processed successfully! Generate:\n\n1. 3 engaging title variations for a blog post\n2. 3 LinkedIn caption variations (professional tone)\n3. 3 Twitter post variations (conversational tone)\n\nEach variation should be optimized for A/B testing.`,
-          {
-            webinarTitle: title,
-          }
-        );
-      }, 1000);
-
-      // Redirect after 3 seconds
-      setTimeout(() => {
-        navigate(`/webinar/${webinar.id}`);
-      }, 3000);
     } catch (error: any) {
       toast.error(error.message || "Processing failed");
       setStep("upload");

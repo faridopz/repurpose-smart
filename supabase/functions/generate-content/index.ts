@@ -1,3 +1,4 @@
+import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -16,7 +17,11 @@ serve(async (req) => {
     
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
+    const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
+    
+    if (!openaiApiKey) {
+      throw new Error('OpenAI API key not configured');
+    }
     
     const supabase = createClient(supabaseUrl, supabaseKey);
 
@@ -34,10 +39,6 @@ serve(async (req) => {
     }
 
     const webinar = transcript.webinars;
-
-    if (!lovableApiKey) {
-      throw new Error('LOVABLE_API_KEY not configured');
-    }
 
     // Build persona context
     const personaContext = persona ? `Target audience: ${persona}. Adapt your language, examples, and complexity to resonate with this specific persona.` : '';
@@ -61,18 +62,20 @@ Return ONLY valid JSON with this exact structure:
   "takeaways": ["Key takeaway 1", "Key takeaway 2", "Key takeaway 3"]
 }`;
 
-    const blogResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    const blogResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${lovableApiKey}`,
+        'Authorization': `Bearer ${openaiApiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
+        model: 'gpt-4-turbo',
         messages: [
           { role: 'system', content: 'You are a professional content writer who creates platform-optimized marketing content. Always return valid JSON.' },
           { role: 'user', content: blogPrompt }
         ],
+        temperature: 0.7,
+        max_tokens: 2000
       }),
     });
 
@@ -89,7 +92,7 @@ Return ONLY valid JSON with this exact structure:
       persona: persona,
       content: JSON.stringify(blogContent),
       prompt_used: blogPrompt,
-      model: 'google/gemini-2.5-flash'
+      model: 'gpt-4-turbo'
     });
 
     // Generate social posts for each platform
@@ -135,18 +138,20 @@ Return ONLY valid JSON with this exact structure:
   ]
 }`;
 
-      const socialResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      const socialResponse = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${lovableApiKey}`,
+          'Authorization': `Bearer ${openaiApiKey}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'google/gemini-2.5-flash',
+          model: 'gpt-4-turbo',
           messages: [
             { role: 'system', content: 'You are a social media expert who creates engaging platform-specific content. Always return valid JSON.' },
             { role: 'user', content: socialPrompt }
           ],
+          temperature: 0.8,
+          max_tokens: 1500
         }),
       });
 
@@ -164,7 +169,7 @@ Return ONLY valid JSON with this exact structure:
           persona: persona,
           content: JSON.stringify(socialContent.posts[i]),
           prompt_used: socialPrompt,
-          model: 'google/gemini-2.5-flash'
+          model: 'gpt-4-turbo'
         });
       }
     }

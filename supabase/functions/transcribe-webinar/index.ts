@@ -40,63 +40,28 @@ serve(async (req) => {
       .eq('id', webinarId);
 
     if (!assemblyAiKey) {
-      console.log('No AssemblyAI key - using mock data');
-      
-      // Create mock transcript with enrichment
-      const mockTranscript = {
-        id: webinarId,
-        webinar_id: webinarId,
-        user_id: webinar.user_id,
-        full_text: `This is a mock transcript for ${webinar.title}. In this webinar, we discussed key topics including innovation, technology trends, and best practices. The speaker emphasized the importance of continuous learning and adapting to market changes.`,
-        timestamps: [
-          { start: 0, end: 30, text: "Welcome everyone to today's webinar.", speaker: "Speaker 1" },
-          { start: 30, end: 90, text: "We'll be discussing innovation and technology trends.", speaker: "Speaker 1" },
-          { start: 90, end: 180, text: "Let's dive into the key topics for today.", speaker: "Speaker 1" }
-        ],
-        speakers: [{ name: "Speaker 1", segments: 3 }],
-        keywords: ['innovation', 'technology', 'learning', 'best practices', 'market trends'],
-        sentiment_timeline: [
-          { start: 0, end: 30, sentiment: 'positive', score: 0.8 },
-          { start: 30, end: 90, sentiment: 'neutral', score: 0.5 },
-          { start: 90, end: 180, sentiment: 'positive', score: 0.9 }
-        ],
-        quotes: [
-          "Innovation is the key to staying competitive",
-          "Continuous learning is essential in today's market",
-          "Adapt or get left behind"
-        ],
-        status: 'completed',
-        assembly_ai_id: 'mock_' + Date.now()
-      };
-
-      const { error: transcriptError } = await supabase
-        .from('transcripts')
-        .insert(mockTranscript);
-
-      if (transcriptError) throw transcriptError;
-
-      // Update webinar status
-      await supabase
-        .from('webinars')
-        .update({ status: 'transcribed' })
-        .eq('id', webinarId);
-
-      return new Response(
-        JSON.stringify({ success: true, message: 'Mock transcript created' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      throw new Error('AssemblyAI API key not configured');
     }
 
     // Real AssemblyAI transcription
+    console.log('Uploading audio file to AssemblyAI...');
+    const audioResponse = await fetch(webinar.file_url);
+    const audioBlob = await audioResponse.blob();
+    
     const uploadResponse = await fetch('https://api.assemblyai.com/v2/upload', {
       method: 'POST',
       headers: {
         'authorization': assemblyAiKey,
       },
-      body: await fetch(webinar.file_url).then(r => r.blob())
+      body: audioBlob
     });
 
+    if (!uploadResponse.ok) {
+      throw new Error('Failed to upload audio to AssemblyAI');
+    }
+
     const { upload_url } = await uploadResponse.json();
+    console.log('Audio uploaded, starting transcription...');
 
     const transcriptResponse = await fetch('https://api.assemblyai.com/v2/transcript', {
       method: 'POST',
@@ -113,7 +78,12 @@ serve(async (req) => {
       })
     });
 
+    if (!transcriptResponse.ok) {
+      throw new Error('Failed to start transcription');
+    }
+
     const { id: transcriptId } = await transcriptResponse.json();
+    console.log('Transcription started with ID:', transcriptId);
 
     // Save initial transcript record
     await supabase

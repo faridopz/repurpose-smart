@@ -270,10 +270,10 @@ export default function Clips() {
           <EmptyState
             icon={Film}
             title="No Video Clips Yet"
-            description="Create engaging short-form video clips from your webinar highlights. AI automatically suggests the best moments based on sentiment, key topics, and speaker emphasis. Perfect for social media!"
-            actionLabel="View Webinars"
+            description="Create engaging short-form video clips from any long-form content. AI automatically suggests the best moments from webinars, podcasts, interviews, courses, and presentations. Perfect for social media!"
+            actionLabel="View Your Content"
             onAction={() => navigate("/dashboard")}
-            secondaryActionLabel="Upload New Webinar"
+            secondaryActionLabel="Upload New Content"
             onSecondaryAction={() => navigate("/dashboard")}
           />
         </main>

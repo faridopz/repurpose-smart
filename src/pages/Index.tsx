@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Video, Sparkles, FileText, BarChart3 } from "lucide-react";
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Video, Sparkles, FileText, Mic, GraduationCap, Users, TrendingUp, BookOpen } from "lucide-react";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -20,12 +21,12 @@ const Index = () => {
           </div>
           
           <h2 className="text-4xl md:text-6xl font-bold mb-6 leading-tight">
-            Turn <span className="text-primary">1 Webinar</span> into{" "}
-            <span className="text-accent">10+ Content Pieces</span>
+            Turn <span className="text-primary">Any Long-Form Content</span> into{" "}
+            <span className="text-accent">10+ Viral Clips</span>
           </h2>
           
           <p className="text-xl md:text-2xl text-muted-foreground mb-4 max-w-3xl mx-auto leading-relaxed">
-            Stop letting your webinar recordings collect dust. Our AI automatically creates blog posts, social media content, video clips, and more — all optimized for each platform.
+            Webinars • Podcasts • Interviews • Courses • Presentations — Transform any long-form content into bite-sized social media gold
           </p>
           
           <p className="text-lg text-muted-foreground mb-8 max-w-2xl mx-auto">
@@ -34,7 +35,7 @@ const Index = () => {
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
             <Button size="lg" onClick={() => navigate("/auth")} className="gap-2 px-8 h-14 text-lg bg-gradient-primary hover:opacity-90 shadow-lg">
-              Start Free — Upload Your First Webinar
+              Start Free — Upload Your Content
             </Button>
             <Button size="lg" variant="outline" onClick={() => navigate("/auth")} className="h-14 text-lg">
               Already have an account? Sign In
@@ -71,9 +72,9 @@ const Index = () => {
               <div className="p-3 bg-primary/10 rounded-lg w-fit mb-4 mt-2">
                 <Video className="h-8 w-8 text-primary" />
               </div>
-              <h3 className="text-2xl font-semibold mb-3">Upload Your Webinar</h3>
+              <h3 className="text-2xl font-semibold mb-3">Upload Your Content</h3>
               <p className="text-muted-foreground leading-relaxed">
-                Drop your video or audio file. We support MP4, MP3, and most common formats. No file size limits for premium users.
+                Drop your video or audio file from any source: webinar, podcast episode, interview, online course, conference talk, or presentation.
               </p>
             </div>
 
@@ -105,9 +106,80 @@ const Index = () => {
           </div>
         </div>
 
+        {/* Use Cases */}
+        <div className="mt-24 max-w-6xl mx-auto">
+          <h2 className="text-3xl md:text-4xl font-bold text-center mb-4">
+            Perfect For <span className="text-primary">Any Long-Form Content</span>
+          </h2>
+          <p className="text-center text-muted-foreground mb-12 max-w-2xl mx-auto text-lg">
+            Whether you're a creator, educator, marketer, or business owner — ContentKlipa extracts maximum value from your content
+          </p>
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <Card className="border-primary/20 hover:border-primary transition-all hover:shadow-lg">
+              <CardHeader>
+                <Video className="h-10 w-10 text-primary mb-2" />
+                <CardTitle>Webinars & Virtual Events</CardTitle>
+                <CardDescription>
+                  Turn 60-minute presentations into shareable highlights that extend your event's reach and engagement
+                </CardDescription>
+              </CardHeader>
+            </Card>
+            
+            <Card className="border-primary/20 hover:border-primary transition-all hover:shadow-lg">
+              <CardHeader>
+                <Mic className="h-10 w-10 text-primary mb-2" />
+                <CardTitle>Podcasts & Interviews</CardTitle>
+                <CardDescription>
+                  Extract the best moments from episodes for audiograms, reels, and promotional clips that drive listeners
+                </CardDescription>
+              </CardHeader>
+            </Card>
+            
+            <Card className="border-primary/20 hover:border-primary transition-all hover:shadow-lg">
+              <CardHeader>
+                <GraduationCap className="h-10 w-10 text-primary mb-2" />
+                <CardTitle>Online Courses & Tutorials</CardTitle>
+                <CardDescription>
+                  Create bite-sized previews and key takeaways to promote your educational content and boost enrollments
+                </CardDescription>
+              </CardHeader>
+            </Card>
+
+            <Card className="border-primary/20 hover:border-primary transition-all hover:shadow-lg">
+              <CardHeader>
+                <Users className="h-10 w-10 text-primary mb-2" />
+                <CardTitle>Conference Talks & Panels</CardTitle>
+                <CardDescription>
+                  Transform keynotes and discussions into shareable moments that amplify your message and authority
+                </CardDescription>
+              </CardHeader>
+            </Card>
+
+            <Card className="border-primary/20 hover:border-primary transition-all hover:shadow-lg">
+              <CardHeader>
+                <TrendingUp className="h-10 w-10 text-primary mb-2" />
+                <CardTitle>Sales & Product Demos</CardTitle>
+                <CardDescription>
+                  Convert demos into compelling feature highlights and customer testimonials for your marketing funnel
+                </CardDescription>
+              </CardHeader>
+            </Card>
+
+            <Card className="border-primary/20 hover:border-primary transition-all hover:shadow-lg">
+              <CardHeader>
+                <BookOpen className="h-10 w-10 text-primary mb-2" />
+                <CardTitle>Workshops & Masterclasses</CardTitle>
+                <CardDescription>
+                  Extract actionable tips and expert insights to maximize your content's impact and student value
+                </CardDescription>
+              </CardHeader>
+            </Card>
+          </div>
+        </div>
+
         {/* What You Get */}
         <div className="mt-24 max-w-4xl mx-auto bg-gradient-to-br from-orange-500/10 to-amber-400/10 rounded-2xl p-12 border-2 border-primary/20">
-          <h2 className="text-3xl font-bold text-center mb-8">What You Get From Every Webinar</h2>
+          <h2 className="text-3xl font-bold text-center mb-8">What You Get From Every Upload</h2>
           <div className="grid md:grid-cols-2 gap-6">
             <div className="flex items-start gap-3">
               <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center flex-shrink-0 mt-1">

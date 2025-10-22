@@ -63,7 +63,7 @@ export default function AuthPage() {
               ContentKlipa
             </h1>
           </div>
-          <p className="text-muted-foreground text-lg">Turn 1 webinar into 10+ content pieces</p>
+          <p className="text-muted-foreground text-lg">Transform any long-form content into viral clips</p>
           <p className="text-sm text-muted-foreground mt-2">⚡ AI-powered • 🎯 Platform-optimized • ✨ Ready in minutes</p>
         </div>
 
@@ -72,7 +72,7 @@ export default function AuthPage() {
             <CardTitle>{isLogin ? "Welcome back!" : "Start creating more content"}</CardTitle>
             <CardDescription>
               {isLogin
-                ? "Sign in to continue turning webinars into content"
+                ? "Sign in to continue creating viral content"
                 : "Join creators saving hours on content repurposing"}
             </CardDescription>
           </CardHeader>

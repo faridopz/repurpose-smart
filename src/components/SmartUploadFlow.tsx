@@ -188,18 +188,18 @@ export default function SmartUploadFlow({ userId }: SmartUploadFlowProps) {
                 <div className="inline-flex p-4 rounded-full bg-gradient-primary mb-4">
                   <Upload className="h-8 w-8 text-white" />
                 </div>
-                <h2 className="text-3xl font-bold mb-2">Upload Your Webinar</h2>
+                <h2 className="text-3xl font-bold mb-2">Upload Your Content</h2>
                 <p className="text-muted-foreground">
-                  Upload your recording and let AI transform it into powerful content
+                  Upload webinars, podcasts, interviews, courses, or any long-form content
                 </p>
               </div>
 
               <div className="space-y-6">
                 <div className="space-y-2">
-                  <Label htmlFor="title">Webinar Title</Label>
+                  <Label htmlFor="title">Content Title</Label>
                   <Input
                     id="title"
-                    placeholder="e.g., Q4 Product Launch Webinar"
+                    placeholder="e.g., Q4 Product Launch, Podcast Episode 42, Industry Interview"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                     className="h-12"
@@ -295,7 +295,7 @@ export default function SmartUploadFlow({ userId }: SmartUploadFlowProps) {
             >
               <CheckCircle2 className="h-16 w-16 text-white" />
             </motion.div>
-            <h2 className="text-4xl font-bold mb-3">Your Webinar is Ready 🚀</h2>
+            <h2 className="text-4xl font-bold mb-3">Your Content is Ready 🚀</h2>
             <p className="text-xl text-muted-foreground mb-6">
               Redirecting to your content...
             </p>

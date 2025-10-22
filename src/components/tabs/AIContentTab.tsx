@@ -104,10 +104,10 @@ export default function AIContentTab({ userId }: AIContentTabProps) {
       <EmptyState
         icon={Sparkles}
         title="No AI Content Yet"
-        description="Once you have transcripts, generate platform-optimized social media posts, blog articles, and marketing copy tailored to your audience. Choose your tone and target platforms for best results."
+        description="Once you have transcripts from webinars, podcasts, interviews, or courses — generate platform-optimized social media posts, blog articles, and marketing copy tailored to your audience."
         actionLabel="View Transcripts"
         onAction={() => navigate("/dashboard")}
-        secondaryActionLabel="Upload Webinar"
+        secondaryActionLabel="Upload Content"
         onSecondaryAction={() => navigate("/dashboard")}
       />
     );

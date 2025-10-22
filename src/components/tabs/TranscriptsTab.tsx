@@ -55,8 +55,8 @@ export default function TranscriptsTab({ userId }: TranscriptsTabProps) {
       <EmptyState
         icon={FileText}
         title="No Transcripts Yet"
-        description="Upload your first webinar recording to automatically generate AI-powered transcripts with speaker detection, timestamps, and key insights."
-        actionLabel="Upload Webinar"
+        description="Upload webinars, podcasts, interviews, courses, or presentations to automatically generate AI-powered transcripts with speaker detection, timestamps, keywords, and key insights."
+        actionLabel="Upload Content"
         onAction={() => navigate("/dashboard")}
       />
     );

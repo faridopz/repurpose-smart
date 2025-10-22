@@ -78,7 +78,7 @@ export default function DashboardLayout() {
                 <h1 className="text-2xl font-bold bg-gradient-to-r from-orange-500 to-amber-400 bg-clip-text text-transparent">
                   ContentKlipa
                 </h1>
-                <p className="text-xs text-muted-foreground">1 Webinar → 10+ Content Pieces</p>
+                <p className="text-xs text-muted-foreground">Long-Form Content → Viral Clips</p>
               </div>
             </div>
             <div className="flex items-center gap-4">

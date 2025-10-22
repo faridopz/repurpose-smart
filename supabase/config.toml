@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.poll-transcription]
 verify_jwt = false
+
+[functions.generate-smart-clips]
+verify_jwt = false

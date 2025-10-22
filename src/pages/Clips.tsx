@@ -464,43 +464,65 @@ export default function Clips() {
               </Card>
             ) : (
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {suggestedSnippets.map((snippet: any) => (
-                  <Card key={snippet.id} className="overflow-hidden hover:border-orange-500/50 transition-colors">
-                    <CardHeader>
-                      <div className="flex items-start justify-between mb-2">
-                        <Checkbox
-                          checked={selectedSnippets.includes(snippet.id)}
-                          onCheckedChange={() => handleToggleSnippet(snippet.id)}
-                        />
-                        <Badge variant="secondary" className="text-xs">Suggested</Badge>
-                      </div>
-                      <CardTitle className="text-base line-clamp-2">
-                        {snippet.webinars?.title}
-                      </CardTitle>
-                      <CardDescription>
-                        {Math.floor(snippet.start_time / 60)}:{String(Math.floor(snippet.start_time % 60)).padStart(2, '0')} - {Math.floor(snippet.end_time / 60)}:{String(Math.floor(snippet.end_time % 60)).padStart(2, '0')}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      <p className="text-sm line-clamp-3">{snippet.transcript_chunk}</p>
-                      <div className="flex flex-wrap gap-1">
-                        {snippet.tags?.map((tag: string, i: number) => (
-                          <Badge key={i} variant="secondary" className="text-xs">
-                            <Tag className="mr-1 h-3 w-3" />
-                            {tag}
-                          </Badge>
-                        ))}
-                      </div>
-                      {snippet.reason && (
-                        <p className="text-xs text-muted-foreground italic">{snippet.reason}</p>
-                      )}
-                      <Button size="sm" className="w-full" variant="outline">
-                        <Film className="mr-2 h-4 w-4" />
-                        Create Clip
-                      </Button>
-                    </CardContent>
-                  </Card>
-                ))}
+                {suggestedSnippets.map((snippet: any) => {
+                  const clipCategory = snippet.tags?.find((t: string) => 
+                    ['motivational', 'insightful', 'funny', 'educational', 'story', 'quote'].includes(t.toLowerCase())
+                  );
+                  
+                  return (
+                    <Card key={snippet.id} className="overflow-hidden hover:border-orange-500/50 transition-colors group">
+                      <CardHeader>
+                        <div className="flex items-start justify-between mb-2">
+                          <Checkbox
+                            checked={selectedSnippets.includes(snippet.id)}
+                            onCheckedChange={() => handleToggleSnippet(snippet.id)}
+                          />
+                          <div className="flex gap-1">
+                            {clipCategory && (
+                              <Badge variant="default" className="text-xs capitalize bg-gradient-to-r from-orange-500 to-amber-400">
+                                {clipCategory}
+                              </Badge>
+                            )}
+                            <Badge variant="secondary" className="text-xs">Suggested</Badge>
+                          </div>
+                        </div>
+                        <CardTitle className="text-base line-clamp-2 group-hover:text-orange-500 transition-colors">
+                          {snippet.reason || snippet.webinars?.title}
+                        </CardTitle>
+                        <CardDescription className="flex items-center gap-2">
+                          <span className="text-muted-foreground">
+                            {Math.floor(snippet.start_time)}s - {Math.floor(snippet.end_time)}s
+                          </span>
+                          <span className="text-orange-500 font-semibold">
+                            • {Math.floor(snippet.end_time - snippet.start_time)}s clip
+                          </span>
+                        </CardDescription>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          from: {snippet.webinars?.title}
+                        </p>
+                      </CardHeader>
+                      <CardContent>
+                        {snippet.thumbnail_url && (
+                          <div className="mb-3 rounded-lg overflow-hidden bg-muted/50 aspect-video flex items-center justify-center">
+                            <Film className="h-8 w-8 text-muted-foreground" />
+                          </div>
+                        )}
+                        <p className="text-sm text-muted-foreground mb-3 line-clamp-3 italic">
+                          "{snippet.transcript_chunk || "No transcript available"}"
+                        </p>
+                        {snippet.tags && snippet.tags.length > 0 && (
+                          <div className="flex flex-wrap gap-1">
+                            {snippet.tags.slice(0, 4).map((tag: string, idx: number) => (
+                              <Badge key={idx} variant="outline" className="text-xs capitalize">
+                                {tag}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
               </div>
             )}
           </TabsContent>
@@ -517,51 +539,72 @@ export default function Clips() {
               </Card>
             ) : (
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {createdSnippets.map((snippet: any) => (
-                  <Card key={snippet.id} className="overflow-hidden hover:border-orange-500/50 transition-colors">
-                    <div className="aspect-video bg-muted relative">
-                      {snippet.thumbnail_url ? (
-                        <img src={snippet.thumbnail_url} alt="Clip thumbnail" className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="flex items-center justify-center h-full">
-                          <Film className="h-12 w-12 text-muted-foreground" />
+                {createdSnippets.map((snippet: any) => {
+                  const clipCategory = snippet.tags?.find((t: string) => 
+                    ['motivational', 'insightful', 'funny', 'educational', 'story', 'quote'].includes(t.toLowerCase())
+                  );
+                  
+                  return (
+                    <Card key={snippet.id} className="overflow-hidden hover:border-green-500/50 transition-colors group">
+                      <CardHeader>
+                        <div className="flex items-start justify-between mb-2">
+                          <Checkbox
+                            checked={selectedSnippets.includes(snippet.id)}
+                            onCheckedChange={() => handleToggleSnippet(snippet.id)}
+                          />
+                          <div className="flex gap-1">
+                            {clipCategory && (
+                              <Badge variant="default" className="text-xs capitalize bg-gradient-to-r from-green-500 to-emerald-400">
+                                {clipCategory}
+                              </Badge>
+                            )}
+                            <Badge className="text-xs">Created</Badge>
+                          </div>
                         </div>
-                      )}
-                      <div className="absolute top-2 left-2">
-                        <Checkbox
-                          checked={selectedSnippets.includes(snippet.id)}
-                          onCheckedChange={() => handleToggleSnippet(snippet.id)}
-                          className="bg-background/80"
-                        />
-                      </div>
-                    </div>
-                    <CardHeader>
-                      <CardTitle className="text-base line-clamp-2">
-                        {snippet.webinars?.title}
-                      </CardTitle>
-                      <CardDescription>
-                        Duration: {Math.floor((snippet.end_time - snippet.start_time) / 60)}:{String(Math.floor((snippet.end_time - snippet.start_time) % 60)).padStart(2, '0')}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      <div className="flex flex-wrap gap-1">
-                        {snippet.tags?.map((tag: string, i: number) => (
-                          <Badge key={i} variant="secondary" className="text-xs">
-                            {tag}
-                          </Badge>
-                        ))}
-                      </div>
-                      <div className="flex gap-2">
-                        <Button size="sm" variant="outline" className="flex-1">
-                          Preview
-                        </Button>
-                        <Button size="sm" variant="outline">
-                          <Download className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                        <CardTitle className="text-base line-clamp-2 group-hover:text-green-500 transition-colors">
+                          {snippet.reason || snippet.webinars?.title}
+                        </CardTitle>
+                        <CardDescription className="flex items-center gap-2">
+                          <span className="text-muted-foreground">
+                            {Math.floor(snippet.start_time)}s - {Math.floor(snippet.end_time)}s
+                          </span>
+                          <span className="text-green-500 font-semibold">
+                            • {Math.floor(snippet.end_time - snippet.start_time)}s clip
+                          </span>
+                        </CardDescription>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          from: {snippet.webinars?.title}
+                        </p>
+                      </CardHeader>
+                      <CardContent>
+                        {snippet.url && (
+                          <video
+                            src={snippet.url}
+                            controls
+                            className="w-full rounded-lg mb-3 bg-black"
+                          />
+                        )}
+                        {!snippet.url && snippet.thumbnail_url && (
+                          <div className="mb-3 rounded-lg overflow-hidden bg-muted/50 aspect-video flex items-center justify-center">
+                            <Film className="h-8 w-8 text-muted-foreground" />
+                          </div>
+                        )}
+                        <p className="text-sm text-muted-foreground mb-3 line-clamp-3 italic">
+                          "{snippet.transcript_chunk || "No transcript available"}"
+                        </p>
+                        {snippet.tags && snippet.tags.length > 0 && (
+                          <div className="flex flex-wrap gap-1">
+                            {snippet.tags.slice(0, 4).map((tag: string, idx: number) => (
+                              <Badge key={idx} variant="outline" className="text-xs capitalize">
+                                {tag}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
               </div>
             )}
           </TabsContent>

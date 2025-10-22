@@ -7,7 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, FileText, Loader2, Sparkles, Film, Video, Clock, FileVideo } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { ArrowLeft, FileText, Loader2, Sparkles, Film, Video, Clock, FileVideo, Scissors } from "lucide-react";
 import { toast } from "sonner";
 import ContentGenerationModal from "@/components/ContentGenerationModal";
 
@@ -16,6 +18,8 @@ export default function WebinarDetails() {
   const navigate = useNavigate();
   const [showGenerateModal, setShowGenerateModal] = useState(false);
   const [transcribing, setTranscribing] = useState(false);
+  const [clipContext, setClipContext] = useState("");
+  const [generatingClips, setGeneratingClips] = useState(false);
 
   const { data: webinar, isLoading } = useQuery({
     queryKey: ["webinar", id],
@@ -110,6 +114,27 @@ export default function WebinarDetails() {
       navigate("/clips");
     } catch (error: any) {
       toast.error(error.message || "Failed to suggest highlights");
+    }
+  };
+
+  const handleGenerateSmartClips = async () => {
+    setGeneratingClips(true);
+    try {
+      const { error } = await supabase.functions.invoke("generate-smart-clips", {
+        body: { 
+          webinarId: id,
+          clipContext: clipContext.trim() || null
+        },
+      });
+
+      if (error) throw error;
+
+      toast.success("Smart clips generated successfully! Check the Clips tab.");
+      navigate("/clips");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to generate smart clips");
+    } finally {
+      setGeneratingClips(false);
     }
   };
 
@@ -333,65 +358,136 @@ export default function WebinarDetails() {
 
           {/* Highlights Tab */}
           <TabsContent value="highlights">
-            <Card>
-              <CardHeader>
-                <CardTitle>Suggested Highlights</CardTitle>
-                <CardDescription>
-                  {snippets && snippets.length > 0
-                    ? "AI-suggested video clips from key moments"
-                    : "No highlights available"}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {snippets && snippets.length > 0 ? (
-                  <div className="grid gap-4">
-                    {snippets.map((snippet) => (
-                      <motion.div
-                        key={snippet.id}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="border rounded-lg p-4 hover:border-primary transition-colors"
+            <div className="space-y-6">
+              {/* Smart Clip Generator */}
+              {transcript && (
+                <Card className="border-orange-500/20 bg-gradient-to-br from-background to-orange-500/5">
+                  <CardHeader>
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-gradient-to-br from-orange-500 to-amber-400 rounded-lg">
+                        <Scissors className="h-5 w-5 text-white" />
+                      </div>
+                      <div>
+                        <CardTitle>Smart Clip Generator</CardTitle>
+                        <CardDescription>
+                          AI-powered highlight detection with context
+                        </CardDescription>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="clipContext">
+                        Clip Context (Optional)
+                      </Label>
+                      <Input
+                        id="clipContext"
+                        placeholder="e.g., Find motivational moments, Key leadership insights, Funny highlights..."
+                        value={clipContext}
+                        onChange={(e) => setClipContext(e.target.value)}
+                        className="bg-background"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Provide context to help AI find the most relevant clips for your needs
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button 
+                        onClick={handleGenerateSmartClips}
+                        disabled={generatingClips}
+                        className="bg-gradient-to-r from-orange-500 to-amber-400 hover:from-orange-600 hover:to-amber-500"
                       >
-                        <div className="flex items-start justify-between mb-2">
-                          <div className="flex-1">
-                            <h4 className="font-semibold mb-1">{snippet.reason || "Highlight"}</h4>
-                            <p className="text-sm text-muted-foreground">
-                              {Math.floor(snippet.start_time)}s - {Math.floor(snippet.end_time)}s
-                            </p>
-                          </div>
-                          <Badge>{snippet.status}</Badge>
-                        </div>
-                        {snippet.transcript_chunk && (
-                          <p className="text-sm text-muted-foreground italic mt-2">
-                            "{snippet.transcript_chunk}"
-                          </p>
+                        {generatingClips ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Generating...
+                          </>
+                        ) : (
+                          <>
+                            <Scissors className="mr-2 h-4 w-4" />
+                            Generate Smart Clips
+                          </>
                         )}
-                        {snippet.tags && snippet.tags.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mt-3">
-                            {snippet.tags.map((tag, idx) => (
-                              <Badge key={idx} variant="outline" className="text-xs">
-                                {tag}
-                              </Badge>
-                            ))}
-                          </div>
-                        )}
-                      </motion.div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-12">
-                    <Film className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                    <p className="text-muted-foreground mb-4">No highlights yet</p>
-                    {transcript && (
-                      <Button onClick={handleSuggestHighlights}>
-                        <Sparkles className="mr-2 h-4 w-4" />
-                        Suggest Highlights
                       </Button>
-                    )}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                      <Button 
+                        variant="outline" 
+                        onClick={handleSuggestHighlights}
+                      >
+                        <Sparkles className="mr-2 h-4 w-4" />
+                        Quick Highlights
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Existing Highlights */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Generated Clips</CardTitle>
+                  <CardDescription>
+                    {snippets && snippets.length > 0
+                      ? "AI-identified video clips from key moments"
+                      : "No clips generated yet"}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {snippets && snippets.length > 0 ? (
+                    <div className="grid gap-4">
+                      {snippets.map((snippet) => (
+                        <motion.div
+                          key={snippet.id}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="border rounded-lg p-4 hover:border-primary transition-colors"
+                        >
+                          <div className="flex items-start justify-between mb-2">
+                            <div className="flex-1">
+                              <h4 className="font-semibold mb-1">{snippet.reason || "Highlight"}</h4>
+                              <p className="text-sm text-muted-foreground">
+                                {Math.floor(snippet.start_time)}s - {Math.floor(snippet.end_time)}s 
+                                <span className="ml-2 text-orange-500">
+                                  ({Math.floor(snippet.end_time - snippet.start_time)}s clip)
+                                </span>
+                              </p>
+                            </div>
+                            <Badge variant={snippet.status === 'suggested' ? 'secondary' : 'default'}>
+                              {snippet.status}
+                            </Badge>
+                          </div>
+                          {snippet.transcript_chunk && (
+                            <p className="text-sm text-muted-foreground italic mt-2 line-clamp-3">
+                              "{snippet.transcript_chunk}"
+                            </p>
+                          )}
+                          {snippet.tags && snippet.tags.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-3">
+                              {snippet.tags.map((tag, idx) => (
+                                <Badge 
+                                  key={idx} 
+                                  variant="outline" 
+                                  className="text-xs capitalize"
+                                >
+                                  {tag}
+                                </Badge>
+                              ))}
+                            </div>
+                          )}
+                        </motion.div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-12">
+                      <Film className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                      <p className="text-muted-foreground mb-2">No clips yet</p>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        Use the Smart Clip Generator above to create AI-powered highlights
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
 
           {/* AI Content Tab */}

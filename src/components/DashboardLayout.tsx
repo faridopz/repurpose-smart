@@ -80,10 +80,12 @@ export default function DashboardLayout() {
             </div>
             <div className="flex items-center gap-4">
               <Button
-                variant="outline"
                 size="sm"
-                onClick={() => setActiveTab("uploads")}
-                className="hidden sm:flex"
+                onClick={() => {
+                  setActiveTab("uploads");
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+                className="hidden sm:flex bg-gradient-to-r from-orange-500 to-amber-400 hover:from-orange-600 hover:to-amber-500 text-white border-0"
               >
                 <Upload className="h-4 w-4 mr-2" />
                 Upload

@@ -6,6 +6,42 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Simple in-memory cache with TTL
+const cache = new Map<string, { data: any; expires: number }>();
+const CACHE_TTL = 60 * 60 * 1000; // 1 hour
+
+function getCacheKey(transcript: string, platforms: string[], tone: string): string {
+  // Create hash-like key from inputs
+  return `${transcript.slice(0, 100)}_${platforms.sort().join(',')}_${tone}`;
+}
+
+function getFromCache(key: string): any | null {
+  const cached = cache.get(key);
+  if (!cached) return null;
+  
+  if (Date.now() > cached.expires) {
+    cache.delete(key);
+    return null;
+  }
+  
+  return cached.data;
+}
+
+function setCache(key: string, data: any): void {
+  cache.set(key, {
+    data,
+    expires: Date.now() + CACHE_TTL
+  });
+  
+  // Clean old entries (keep cache size under 100)
+  if (cache.size > 100) {
+    const firstKey = cache.keys().next().value;
+    if (firstKey) {
+      cache.delete(firstKey);
+    }
+  }
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -46,6 +82,25 @@ serve(async (req) => {
 
     console.log(`Starting content generation for ${platforms.length} platform(s) with tone: ${tone}`);
 
+    // Check cache first
+    const cacheKey = getCacheKey(transcript, platforms, tone);
+    const cachedResult = getFromCache(cacheKey);
+    
+    if (cachedResult) {
+      console.log('Returning cached result');
+      return new Response(
+        JSON.stringify({
+          status: "success",
+          generated: cachedResult,
+          diagnostics: {
+            cached: true,
+            total_time_ms: Date.now() - startTime
+          }
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Truncate transcript if too long (keep first 10k characters)
     const truncatedTranscript = transcript.length > 10000 
       ? transcript.slice(0, 10000) + "\n\n...[transcript truncated for length]"
@@ -53,138 +108,176 @@ serve(async (req) => {
 
     console.log(`Transcript length: ${transcript.length} chars (truncated to ${truncatedTranscript.length})`);
 
-    // 4. Build persona context
+    // Build persona context
     const personaContext = persona 
-      ? `\n\nTARGET PERSONA: ${persona}\nAdapt your language, examples, and messaging to resonate specifically with this audience.`
+      ? `Target audience: ${persona}. Adapt your language and messaging accordingly.`
       : '';
 
-    // 5. Generate content for each platform
-    const generated: Record<string, any> = {};
-    
-    for (const platform of platforms) {
-      const platformStart = Date.now();
-      
-      let prompt = '';
-      let constraints = '';
-      
-      if (platform === 'linkedin') {
-        constraints = 'Write a long-form LinkedIn post (150-250 words)';
-        prompt = `${constraints}. Professional yet engaging tone. Use line breaks for readability. Start with a strong hook.`;
-      } else if (platform === 'twitter') {
-        constraints = 'Write a 3-tweet thread';
-        prompt = `${constraints}. Each tweet must be ≤280 characters. Punchy, concise, with strong hooks. Each tweet should work standalone but flow together.`;
-      } else if (platform === 'instagram') {
-        constraints = 'Write an Instagram caption';
-        prompt = `${constraints}. 1-2 sentences max. Visual storytelling style. Include 5-8 relevant hashtags. Use emojis strategically.`;
-      } else if (platform === 'youtube') {
-        constraints = 'Write a YouTube video description';
-        prompt = `${constraints}. SEO-optimized. Include key timestamps suggestions and a clear CTA.`;
-      } else if (platform === 'blog') {
-        constraints = 'Write a blog post summary (500-800 words)';
-        prompt = `${constraints}. Include a compelling title, 3 subheadings, main body, and 3 key takeaways.`;
-      } else {
-        console.warn(`Unknown platform: ${platform}, skipping`);
-        continue;
+    // Build platform-specific instructions
+    const platformInstructions = platforms.map(p => {
+      switch (p) {
+        case 'linkedin':
+          return 'LinkedIn: 150-250 word professional post with line breaks. Strong hook, actionable insights.';
+        case 'twitter':
+          return 'Twitter: 3-tweet thread. Each ≤280 chars. Punchy hooks, standalone tweets that flow together.';
+        case 'instagram':
+          return 'Instagram: 1-2 sentence caption with 5-8 hashtags. Visual storytelling with strategic emojis.';
+        case 'youtube':
+          return 'YouTube: SEO-optimized description with timestamp suggestions and clear CTA.';
+        case 'blog':
+          return 'Blog: 500-800 word summary with title, 3 subheadings, body, and 3 key takeaways.';
+        case 'summary':
+          return 'Summary: 3-4 sentence executive summary of the main points.';
+        default:
+          return null;
       }
+    }).filter(Boolean).join('\n');
 
-      const fullPrompt = `You are a content strategist. Based on the following webinar transcript, create ${platform}-optimized content.
+    const systemPrompt = `You are an expert content strategist. Create platform-optimized content that is concise, distinct, and actionable. ${personaContext}`;
 
-TONE: ${tone}${personaContext}
+    const userPrompt = `Based on this transcript, create content for each requested platform.
 
 TRANSCRIPT:
 ${truncatedTranscript}
 
-TASK: ${prompt}
+PLATFORMS TO CREATE:
+${platformInstructions}
 
-Return your response as valid JSON with appropriate structure for the platform.`;
+TONE: ${tone}
 
-      console.log(`Generating content for ${platform}...`);
+Create concise, distinct content for each platform. Be specific and actionable.`;
 
-      try {
-        const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${lovableApiKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            model: 'google/gemini-2.5-flash',
-            messages: [
-              { role: 'system', content: 'You are an expert content strategist who creates platform-optimized content. Always respond with clear, actionable content.' },
-              { role: 'user', content: fullPrompt }
-            ],
-            temperature: 0.7,
-          }),
-        });
+    console.log('Generating all platform content in one API call...');
 
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error(`AI API error for ${platform}:`, response.status, errorText);
-          
-          if (response.status === 429) {
-            return new Response(
-              JSON.stringify({ status: "failed", step: "generation", error: "Rate limit exceeded. Please try again later." }),
-              { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-            );
+    try {
+      // Use tool calling for structured output
+      const aiStart = Date.now();
+      const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${lovableApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'google/gemini-2.5-flash',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt }
+          ],
+          tools: [{
+            type: 'function',
+            function: {
+              name: 'create_platform_content',
+              description: 'Generate content optimized for specific platforms',
+              parameters: {
+                type: 'object',
+                properties: {
+                  linkedin: { 
+                    type: 'string', 
+                    description: 'LinkedIn post (150-250 words, professional tone)' 
+                  },
+                  twitter: { 
+                    type: 'string', 
+                    description: '3-tweet thread, each ≤280 chars' 
+                  },
+                  instagram: { 
+                    type: 'string', 
+                    description: 'Short caption with hashtags' 
+                  },
+                  youtube: { 
+                    type: 'string', 
+                    description: 'SEO-optimized video description' 
+                  },
+                  blog: { 
+                    type: 'string', 
+                    description: 'Blog post summary (500-800 words)' 
+                  },
+                  summary: { 
+                    type: 'string', 
+                    description: '3-4 sentence executive summary' 
+                  }
+                },
+                required: platforms,
+                additionalProperties: false
+              }
+            }
+          }],
+          tool_choice: { 
+            type: 'function', 
+            function: { name: 'create_platform_content' } 
           }
-          
-          if (response.status === 402) {
-            return new Response(
-              JSON.stringify({ status: "failed", step: "generation", error: "Payment required. Please add credits to your Lovable AI workspace." }),
-              { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-            );
-          }
+        }),
+      });
 
-          throw new Error(`AI API returned ${response.status}: ${errorText}`);
-        }
+      timings.ai_generation_ms = Date.now() - aiStart;
 
-        const data = await response.json();
-        const content = data.choices?.[0]?.message?.content;
-
-        if (!content) {
-          throw new Error('No content returned from AI');
-        }
-
-        generated[platform] = content;
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('AI API error:', response.status, errorText);
         
-        const platformTime = Date.now() - platformStart;
-        timings[`${platform}_generation_ms`] = platformTime;
-        console.log(`${platform} content generated in ${platformTime}ms`);
-
-      } catch (error) {
-        console.error(`Error generating content for ${platform}:`, error);
-        return new Response(
-          JSON.stringify({ 
-            status: "failed", 
-            step: "generation", 
-            error: `Failed to generate content for ${platform}: ${error instanceof Error ? error.message : 'Unknown error'}`,
-            platform: platform
-          }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-    }
-
-    // 6. Calculate total time and token estimate
-    const totalTime = Date.now() - startTime;
-    const tokensEstimate = Math.ceil(truncatedTranscript.length / 4); // rough estimate
-
-    console.log(`Content generation completed in ${totalTime}ms for ${platforms.length} platforms`);
-
-    // 7. Return success response
-    return new Response(
-      JSON.stringify({
-        status: "success",
-        generated: generated,
-        diagnostics: {
-          total_time_ms: totalTime,
-          tokens_used_estimate: tokensEstimate,
-          platforms_generated: platforms.length,
-          ...timings
+        if (response.status === 429) {
+          return new Response(
+            JSON.stringify({ status: "failed", step: "generation", error: "Rate limit exceeded. Please try again later." }),
+            { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
         }
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+        
+        if (response.status === 402) {
+          return new Response(
+            JSON.stringify({ status: "failed", step: "generation", error: "Payment required. Please add credits to your Lovable AI workspace." }),
+            { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        throw new Error(`AI API returned ${response.status}: ${errorText}`);
+      }
+
+      const data = await response.json();
+      const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
+
+      if (!toolCall || !toolCall.function?.arguments) {
+        throw new Error('No tool call response from AI');
+      }
+
+      const generated = JSON.parse(toolCall.function.arguments);
+      console.log(`Content generated for ${Object.keys(generated).length} platforms in ${timings.ai_generation_ms}ms`);
+
+      // Cache the result
+      setCache(cacheKey, generated);
+
+      // Calculate total time and token estimate
+      const totalTime = Date.now() - startTime;
+      const tokensEstimate = Math.ceil(truncatedTranscript.length / 4);
+
+      console.log(`Content generation completed in ${totalTime}ms`);
+
+      // Return success response
+      return new Response(
+        JSON.stringify({
+          status: "success",
+          generated: generated,
+          diagnostics: {
+            cached: false,
+            total_time_ms: totalTime,
+            tokens_used_estimate: tokensEstimate,
+            platforms_generated: Object.keys(generated).length,
+            ...timings
+          }
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+
+    } catch (error) {
+      console.error('AI generation error:', error);
+      return new Response(
+        JSON.stringify({ 
+          status: "failed", 
+          step: "generation", 
+          error: `Failed to generate content: ${error instanceof Error ? error.message : 'Unknown error'}`
+        }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
   } catch (error) {
     console.error('Content generation error:', error);

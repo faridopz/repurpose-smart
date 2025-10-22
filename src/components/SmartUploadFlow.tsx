@@ -94,14 +94,24 @@ export default function SmartUploadFlow({ userId }: SmartUploadFlowProps) {
         setProgress(85);
         setStep("generating");
 
-        // Generate content
-        await supabase.functions.invoke('generate-content', {
-          body: {
-            webinarId,
-            platforms: ['linkedin', 'twitter'],
-            tone: 'professional'
-          }
-        });
+        // Generate content - fetch transcript first
+        const { data: transcriptData, error: transcriptFetchError } = await supabase
+          .from('transcripts')
+          .select('full_text')
+          .eq('webinar_id', webinarId)
+          .single();
+
+        if (transcriptFetchError || !transcriptData?.full_text) {
+          console.warn('Transcript not available yet for content generation');
+        } else {
+          await supabase.functions.invoke('generate-content', {
+            body: {
+              transcript: transcriptData.full_text,
+              platforms: ['linkedin', 'twitter', 'summary'],
+              tone: 'professional'
+            }
+          });
+        }
 
         setProgress(100);
         setStep("success");

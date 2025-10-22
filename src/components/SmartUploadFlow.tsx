@@ -116,10 +116,21 @@ export default function SmartUploadFlow({ userId }: SmartUploadFlowProps) {
       setProgress(100);
       setStep("success");
 
-      // Redirect after 2 seconds
+      // Trigger AI assistant with automatic suggestions
+      setTimeout(() => {
+        const { openAIAssistant } = require("@/components/AIAssistant");
+        openAIAssistant(
+          `The webinar "${title}" has been processed successfully! Generate:\n\n1. 3 engaging title variations for a blog post\n2. 3 LinkedIn caption variations (professional tone)\n3. 3 Twitter post variations (conversational tone)\n\nEach variation should be optimized for A/B testing.`,
+          {
+            webinarTitle: title,
+          }
+        );
+      }, 1000);
+
+      // Redirect after 3 seconds
       setTimeout(() => {
         navigate(`/webinar/${webinar.id}`);
-      }, 2000);
+      }, 3000);
     } catch (error: any) {
       toast.error(error.message || "Processing failed");
       setStep("upload");

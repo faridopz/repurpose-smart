@@ -1,6 +1,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Sparkles, Loader2, Copy, Check, FileText } from "lucide-react";
+import { Sparkles, Loader2, Copy, Check, FileText, Wand2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import EmptyState from "@/components/EmptyState";
+import { openAIAssistant } from "@/components/AIAssistant";
 
 interface AIContentTabProps {
   userId: string;
@@ -59,6 +60,27 @@ export default function AIContentTab({ userId }: AIContentTabProps) {
     setCopiedId(id);
     toast.success("Copied to clipboard!");
     setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  const handleRefineWithAI = (content: any) => {
+    let parsedContent;
+    try {
+      parsedContent = JSON.parse(content.content);
+    } catch {
+      parsedContent = { text: content.content };
+    }
+
+    const contentText = parsedContent.text || parsedContent.body || content.content;
+    const platform = content.platform || 'blog';
+    const tone = content.tone || 'professional';
+    
+    openAIAssistant(
+      `Refine this ${platform} content. Current tone: ${tone}.\n\nContent:\n${contentText.slice(0, 500)}...`,
+      {
+        webinarTitle: content.webinars?.title,
+        generatedContent: contentText,
+      }
+    );
   };
 
   if (isLoading) {
@@ -194,18 +216,28 @@ export default function AIContentTab({ userId }: AIContentTabProps) {
                         {content.webinars?.title || "Untitled Webinar"}
                       </p>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleCopy(content.content, content.id)}
-                      className="shrink-0"
-                    >
-                      {copiedId === content.id ? (
-                        <Check className="h-4 w-4 text-green-500" />
-                      ) : (
-                        <Copy className="h-4 w-4" />
-                      )}
-                    </Button>
+                    <div className="flex gap-2 shrink-0">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleRefineWithAI(content)}
+                        className="text-orange-500 hover:text-orange-600 hover:bg-orange-500/10"
+                      >
+                        <Wand2 className="h-4 w-4 mr-1" />
+                        Refine
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleCopy(content.content, content.id)}
+                      >
+                        {copiedId === content.id ? (
+                          <Check className="h-4 w-4 text-green-500" />
+                        ) : (
+                          <Copy className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </div>
                   </div>
 
                   {renderContent(content)}

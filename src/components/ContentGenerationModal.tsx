@@ -74,6 +74,18 @@ export default function ContentGenerationModal({
       if (error) throw error;
 
       toast.success('Content generated successfully!');
+      
+      // Trigger AI assistant with automatic suggestions after a short delay
+      setTimeout(() => {
+        const { openAIAssistant } = require("@/components/AIAssistant");
+        openAIAssistant(
+          `Content has been generated for ${webinarTitle}! Now suggest:\n\n1. 3 alternative blog post titles for A/B testing\n2. 3 alternative ${selectedPlatforms.join(', ')} caption variations\n3. Best posting times and strategies for each platform\n\nTone: ${tone}`,
+          {
+            webinarTitle,
+          }
+        );
+      }, 500);
+      
       onOpenChange(false);
       window.location.reload(); // Refresh to show new content
     } catch (error: any) {

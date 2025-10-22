@@ -19,15 +19,48 @@ interface AIAssistantProps {
     clips?: any[];
     generatedContent?: string;
   };
+  initialPrompt?: string;
+  onInsertContent?: (content: string) => void;
 }
 
-export default function AIAssistant({ context }: AIAssistantProps) {
+// Create a global reference to control the assistant
+let globalAssistantControl: {
+  open: (prompt?: string, context?: any) => void;
+} | null = null;
+
+export default function AIAssistant({ context, initialPrompt, onInsertContent }: AIAssistantProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [currentContext, setCurrentContext] = useState(context);
   const scrollRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+
+  // Expose global control
+  useEffect(() => {
+    globalAssistantControl = {
+      open: (prompt?: string, newContext?: any) => {
+        setIsOpen(true);
+        if (newContext) {
+          setCurrentContext(newContext);
+        }
+        if (prompt) {
+          setInput(prompt);
+        }
+      },
+    };
+    return () => {
+      globalAssistantControl = null;
+    };
+  }, []);
+
+  // Handle initial prompt
+  useEffect(() => {
+    if (initialPrompt && isOpen && messages.length === 0) {
+      streamChat(initialPrompt);
+    }
+  }, [initialPrompt, isOpen]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -52,7 +85,7 @@ export default function AIAssistant({ context }: AIAssistantProps) {
           },
           body: JSON.stringify({
             messages: newMessages,
-            context,
+            context: currentContext,
           }),
         }
       );
@@ -195,14 +228,26 @@ export default function AIAssistant({ context }: AIAssistantProps) {
                   key={idx}
                   className={`mb-4 flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
-                  <div
-                    className={`max-w-[80%] rounded-lg px-4 py-2 ${
-                      msg.role === 'user'
-                        ? 'bg-gradient-to-r from-orange-500 to-amber-400 text-white'
-                        : 'bg-muted text-foreground'
-                    }`}
-                  >
-                    <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                  <div className={`max-w-[80%] ${msg.role === 'user' ? '' : 'space-y-2'}`}>
+                    <div
+                      className={`rounded-lg px-4 py-2 ${
+                        msg.role === 'user'
+                          ? 'bg-gradient-to-r from-orange-500 to-amber-400 text-white'
+                          : 'bg-muted text-foreground'
+                      }`}
+                    >
+                      <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                    </div>
+                    {msg.role === 'assistant' && onInsertContent && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => onInsertContent(msg.content)}
+                        className="text-xs"
+                      >
+                        Insert to Post
+                      </Button>
+                    )}
                   </div>
                 </div>
               ))}
@@ -246,4 +291,11 @@ export default function AIAssistant({ context }: AIAssistantProps) {
       </AnimatePresence>
     </>
   );
+}
+
+// Export helper function to open assistant programmatically
+export function openAIAssistant(prompt?: string, context?: any) {
+  if (globalAssistantControl) {
+    globalAssistantControl.open(prompt, context);
+  }
 }

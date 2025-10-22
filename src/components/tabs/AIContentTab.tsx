@@ -1,5 +1,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Sparkles, Loader2, Copy, Check } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Sparkles, Loader2, Copy, Check, FileText } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -38,7 +39,23 @@ export default function AIContentTab({ userId }: AIContentTabProps) {
   });
 
   const handleCopy = (content: string, id: string) => {
-    navigator.clipboard.writeText(content);
+    // Parse JSON content if it's stored as JSON
+    let textToCopy = content;
+    try {
+      const parsed = JSON.parse(content);
+      if (parsed.text) {
+        textToCopy = parsed.text;
+        if (parsed.hashtags && parsed.hashtags.length > 0) {
+          textToCopy += '\n\n' + parsed.hashtags.map((tag: string) => `#${tag}`).join(' ');
+        }
+      } else if (parsed.body) {
+        textToCopy = `${parsed.title}\n\n${parsed.body}\n\nKey Takeaways:\n${parsed.takeaways?.map((t: string) => `• ${t}`).join('\n')}`;
+      }
+    } catch {
+      // If not JSON, use as is
+    }
+
+    navigator.clipboard.writeText(textToCopy);
     setCopiedId(id);
     toast.success("Copied to clipboard!");
     setTimeout(() => setCopiedId(null), 2000);
@@ -74,61 +91,140 @@ export default function AIContentTab({ userId }: AIContentTabProps) {
     );
   }
 
+  // Group content by platform
+  const contentByPlatform = aiContent.reduce((acc: any, content: any) => {
+    const platform = content.platform || 'blog';
+    if (!acc[platform]) acc[platform] = [];
+    acc[platform].push(content);
+    return acc;
+  }, {});
+
+  const platforms = Object.keys(contentByPlatform);
+
+  const renderContent = (content: any) => {
+    let parsedContent;
+    try {
+      parsedContent = JSON.parse(content.content);
+    } catch {
+      parsedContent = { text: content.content };
+    }
+
+    if (parsedContent.body) {
+      // Blog post format
+      return (
+        <div className="space-y-3">
+          <h3 className="font-semibold text-lg">{parsedContent.title}</h3>
+          <p className="text-sm whitespace-pre-wrap line-clamp-6">{parsedContent.body}</p>
+          {parsedContent.takeaways && (
+            <div className="space-y-1">
+              <p className="text-xs font-medium text-muted-foreground">Key Takeaways:</p>
+              <ul className="text-xs space-y-1 list-disc list-inside">
+                {parsedContent.takeaways.map((takeaway: string, i: number) => (
+                  <li key={i}>{takeaway}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // Social post format
+    return (
+      <div className="space-y-2">
+        <p className="text-sm whitespace-pre-wrap line-clamp-4">{parsedContent.text}</p>
+        {parsedContent.hashtags && parsedContent.hashtags.length > 0 && (
+          <div className="flex flex-wrap gap-1">
+            {parsedContent.hashtags.map((tag: string, i: number) => (
+              <Badge key={i} variant="secondary" className="text-xs">
+                #{tag}
+              </Badge>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle>AI-Generated Content</CardTitle>
-        <CardDescription>Transform transcripts into blog posts, social media, and more</CardDescription>
+        <CardTitle className="flex items-center gap-2">
+          <Sparkles className="h-5 w-5" />
+          AI-Generated Content
+        </CardTitle>
+        <CardDescription>Platform-optimized content ready to publish</CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="space-y-4">
-          {aiContent.map((content: any) => (
-            <div
-              key={content.id}
-              className="p-4 border rounded-lg hover:border-primary/50 transition-colors"
-            >
-              <div className="flex items-start justify-between mb-3">
-                <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <Badge variant="secondary" className="capitalize">
-                      {content.content_type}
-                    </Badge>
-                    {content.platform && (
-                      <Badge variant="outline" className="capitalize">
-                        {content.platform}
-                      </Badge>
-                    )}
-                    {content.tone && (
-                      <Badge variant="outline" className="capitalize">
-                        {content.tone}
+        <Tabs defaultValue={platforms[0]} className="w-full">
+          <TabsList className="w-full justify-start overflow-x-auto flex-nowrap">
+            {platforms.map((platform) => (
+              <TabsTrigger key={platform} value={platform} className="capitalize">
+                {platform === 'blog' ? <FileText className="h-4 w-4 mr-1" /> : null}
+                {platform}
+                <Badge variant="secondary" className="ml-2">
+                  {contentByPlatform[platform].length}
+                </Badge>
+              </TabsTrigger>
+            ))}
+          </TabsList>
+
+          {platforms.map((platform) => (
+            <TabsContent key={platform} value={platform} className="space-y-4 mt-4">
+              {contentByPlatform[platform].map((content: any) => (
+                <div
+                  key={content.id}
+                  className="p-4 border rounded-lg hover:border-primary/50 transition-colors bg-card"
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
+                        {content.tone && (
+                          <Badge variant="outline" className="capitalize">
+                            {content.tone}
+                          </Badge>
+                        )}
+                        {content.persona && (
+                          <Badge variant="outline" className="text-xs">
+                            {content.persona}
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        {content.webinars?.title || "Untitled Webinar"}
+                      </p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleCopy(content.content, content.id)}
+                      className="shrink-0"
+                    >
+                      {copiedId === content.id ? (
+                        <Check className="h-4 w-4 text-green-500" />
+                      ) : (
+                        <Copy className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
+
+                  {renderContent(content)}
+
+                  <div className="flex items-center justify-between mt-3 pt-3 border-t">
+                    <p className="text-xs text-muted-foreground">
+                      {new Date(content.created_at).toLocaleDateString()}
+                    </p>
+                    {content.model && (
+                      <Badge variant="secondary" className="text-xs">
+                        {content.model}
                       </Badge>
                     )}
                   </div>
-                  <p className="text-sm text-muted-foreground">
-                    {content.webinars?.title || "Untitled Webinar"}
-                  </p>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleCopy(content.content, content.id)}
-                >
-                  {copiedId === content.id ? (
-                    <Check className="h-4 w-4 text-green-500" />
-                  ) : (
-                    <Copy className="h-4 w-4" />
-                  )}
-                </Button>
-              </div>
-              <p className="text-sm whitespace-pre-wrap line-clamp-4">
-                {content.content}
-              </p>
-              <p className="text-xs text-muted-foreground mt-2">
-                {new Date(content.created_at).toLocaleDateString()}
-              </p>
-            </div>
+              ))}
+            </TabsContent>
           ))}
-        </div>
+        </Tabs>
       </CardContent>
     </Card>
   );

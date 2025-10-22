@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Loader2, Sparkles } from "lucide-react";
@@ -25,18 +26,13 @@ const PLATFORMS = [
 
 const TONES = [
   { value: 'professional', label: 'Professional' },
-  { value: 'casual', label: 'Casual' },
+  { value: 'conversational', label: 'Conversational' },
+  { value: 'witty', label: 'Witty' },
+  { value: 'persuasive', label: 'Persuasive' },
+  { value: 'empathetic', label: 'Empathetic' },
   { value: 'urgent', label: 'Urgent' },
   { value: 'inspirational', label: 'Inspirational' },
   { value: 'technical', label: 'Technical' },
-];
-
-const PERSONAS = [
-  { value: '', label: 'None' },
-  { value: 'c-suite', label: 'C-Suite Executive' },
-  { value: 'it', label: 'IT Professional' },
-  { value: 'finance', label: 'Finance' },
-  { value: 'socialcare', label: 'Social Care' },
 ];
 
 export default function ContentGenerationModal({
@@ -48,7 +44,7 @@ export default function ContentGenerationModal({
   const [loading, setLoading] = useState(false);
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>(['linkedin']);
   const [tone, setTone] = useState('professional');
-  const [persona, setPersona] = useState('');
+  const [personaText, setPersonaText] = useState('');
 
   const handlePlatformToggle = (platformId: string) => {
     setSelectedPlatforms(prev =>
@@ -71,7 +67,7 @@ export default function ContentGenerationModal({
           webinarId,
           platforms: selectedPlatforms,
           tone,
-          persona: persona || null
+          persona: personaText || null
         }
       });
 
@@ -141,20 +137,14 @@ export default function ContentGenerationModal({
 
           <div className="space-y-2">
             <Label htmlFor="persona">Target Persona (Optional)</Label>
-            <Select value={persona} onValueChange={setPersona}>
-              <SelectTrigger id="persona">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {PERSONAS.map(p => (
-                  <SelectItem key={p.value} value={p.value}>
-                    {p.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Input
+              id="persona"
+              placeholder="e.g., marketing manager, developer advocate, CFO"
+              value={personaText}
+              onChange={(e) => setPersonaText(e.target.value)}
+            />
             <p className="text-xs text-muted-foreground">
-              Tailor language and examples for specific audience
+              Describe your target audience for tailored language and examples
             </p>
           </div>
 

@@ -39,16 +39,25 @@ serve(async (req) => {
       throw new Error('LOVABLE_API_KEY not configured');
     }
 
+    // Build persona context
+    const personaContext = persona ? `Target audience: ${persona}. Adapt your language, examples, and complexity to resonate with this specific persona.` : '';
+    
     // Generate blog post
-    const blogPrompt = `You are a professional content writer. Create a 500-800 word blog post based on this webinar transcript. 
-Tone: ${tone}. ${persona ? `Persona: ${persona}.` : ''}
-Transcript: ${transcript.full_text || 'No transcript available'}
+    const blogPrompt = `You are an expert content strategist. Create a compelling 500-800 word blog post from this webinar transcript.
+
+Tone: ${tone} - embody this tone throughout the writing.
+${personaContext}
+
+Webinar Title: ${webinar.title}
+Transcript: ${transcript.full_text?.slice(0, 3000) || 'No transcript available'}
+
+Write in a ${tone} tone. Make it engaging, actionable, and valuable for the reader.
 
 Return ONLY valid JSON with this exact structure:
 {
-  "title": "Blog post title",
+  "title": "Compelling blog post title",
   "subheadings": ["Subheading 1", "Subheading 2", "Subheading 3"],
-  "body": "Full blog post content with paragraphs",
+  "body": "Full blog post content with paragraphs separated by \\n\\n",
   "takeaways": ["Key takeaway 1", "Key takeaway 2", "Key takeaway 3"]
 }`;
 
@@ -86,16 +95,36 @@ Return ONLY valid JSON with this exact structure:
     // Generate social posts for each platform
     for (const platform of platforms) {
       let constraints = '';
-      if (platform === 'linkedin') constraints = 'up to 1300 chars, professional tone';
-      else if (platform === 'twitter') constraints = 'thread of up to 4 tweets, each <= 280 chars';
-      else if (platform === 'instagram') constraints = 'caption up to 2200 chars, include 3-6 hashtags';
-      else if (platform === 'facebook') constraints = 'engaging post up to 1000 chars';
-      else if (platform === 'youtube') constraints = 'video description up to 5000 chars, include timestamps';
+      let platformGuidance = '';
+      
+      if (platform === 'linkedin') {
+        constraints = '1-3 posts, each up to 1300 chars';
+        platformGuidance = 'Professional yet engaging. Use line breaks for readability. Include a hook in the first line.';
+      } else if (platform === 'twitter') {
+        constraints = '3 tweet variations, each ≤280 chars';
+        platformGuidance = 'Punchy and concise. Use strong hooks. Each tweet should work standalone.';
+      } else if (platform === 'instagram') {
+        constraints = '3 caption variations, each up to 2200 chars';
+        platformGuidance = 'Visual storytelling style. Include 5-8 relevant hashtags. Use emojis strategically.';
+      } else if (platform === 'facebook') {
+        constraints = '3 post variations, each up to 1000 chars';
+        platformGuidance = 'Conversational and community-focused. Encourage engagement with questions.';
+      } else if (platform === 'youtube') {
+        constraints = '3 description variations, each up to 5000 chars';
+        platformGuidance = 'SEO-optimized with keywords. Include timestamp suggestions. Add CTAs and links section.';
+      }
 
-      const socialPrompt = `Create 3 platform-optimized posts for ${platform}.
+      const socialPrompt = `You are a ${platform} content expert. Create 3 distinct, platform-optimized posts.
+
+Platform: ${platform}
 Constraints: ${constraints}
-Tone: ${tone}. ${persona ? `Persona: ${persona}.` : ''}
-Transcript summary: ${transcript.full_text?.slice(0, 500) || 'No transcript available'}
+Platform Style: ${platformGuidance}
+Tone: ${tone} - maintain this tone consistently.
+${personaContext}
+
+Webinar Content: ${transcript.full_text?.slice(0, 1000) || 'No transcript available'}
+
+Create 3 different approaches (e.g., storytelling, data-driven, inspirational) that would perform well on ${platform}.
 
 Return ONLY valid JSON with this exact structure:
 {

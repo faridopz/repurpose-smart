@@ -55,22 +55,25 @@ export default function AuthPage() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-subtle p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-2 mb-4">
-            <div className="p-2 bg-gradient-primary rounded-lg">
+          <div className="inline-flex items-center gap-3 mb-4">
+            <div className="p-2 bg-gradient-primary rounded-lg shadow-lg">
               <Video className="h-8 w-8 text-primary-foreground" />
             </div>
-            <h1 className="text-3xl font-bold">WebinarAI</h1>
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-orange-500 to-amber-400 bg-clip-text text-transparent">
+              ContentKlipa
+            </h1>
           </div>
-          <p className="text-muted-foreground">Transform webinars into powerful content</p>
+          <p className="text-muted-foreground text-lg">Turn 1 webinar into 10+ content pieces</p>
+          <p className="text-sm text-muted-foreground mt-2">⚡ AI-powered • 🎯 Platform-optimized • ✨ Ready in minutes</p>
         </div>
 
         <Card>
           <CardHeader>
-            <CardTitle>{isLogin ? "Welcome back" : "Create account"}</CardTitle>
+            <CardTitle>{isLogin ? "Welcome back!" : "Start creating more content"}</CardTitle>
             <CardDescription>
               {isLogin
-                ? "Sign in to access your dashboard"
-                : "Start repurposing webinars with AI"}
+                ? "Sign in to continue turning webinars into content"
+                : "Join creators saving hours on content repurposing"}
             </CardDescription>
           </CardHeader>
           <CardContent>

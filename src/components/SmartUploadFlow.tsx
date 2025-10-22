@@ -31,11 +31,24 @@ export default function SmartUploadFlow({ userId }: SmartUploadFlowProps) {
         toast.error("File size must be less than 1GB");
         return;
       }
-      const allowedTypes = ["video/mp4", "audio/mp3", "audio/mpeg"];
-      if (!allowedTypes.includes(selectedFile.type)) {
-        toast.error("Only MP4 and MP3 files are supported");
+      
+      // Support comprehensive video and audio formats
+      const allowedTypes = [
+        // Video formats
+        "video/mp4", "video/quicktime", "video/x-msvideo", "video/webm", "video/x-matroska",
+        // Audio formats
+        "audio/mp3", "audio/mpeg", "audio/wav", "audio/x-wav", "audio/mp4", "audio/x-m4a"
+      ];
+      
+      // Also check file extension as fallback (MIME types can be unreliable)
+      const fileExtension = selectedFile.name.toLowerCase().split('.').pop();
+      const allowedExtensions = ["mp4", "mov", "avi", "webm", "mkv", "mp3", "wav", "m4a"];
+      
+      if (!allowedTypes.includes(selectedFile.type) && !allowedExtensions.includes(fileExtension || "")) {
+        toast.error("Supported formats: MP4, MOV, AVI, WEBM, MKV, MP3, WAV, M4A");
         return;
       }
+      
       setFile(selectedFile);
       if (!title) {
         setTitle(selectedFile.name.replace(/\.[^/.]+$/, ""));
@@ -212,7 +225,7 @@ export default function SmartUploadFlow({ userId }: SmartUploadFlowProps) {
                     <Input
                       id="file"
                       type="file"
-                      accept=".mp4,.mp3"
+                      accept=".mp4,.mov,.avi,.webm,.mkv,.mp3,.wav,.m4a,video/*,audio/*"
                       onChange={handleFileChange}
                       className="hidden"
                     />
@@ -231,7 +244,7 @@ export default function SmartUploadFlow({ userId }: SmartUploadFlowProps) {
                         <div>
                           <FileVideo className="h-12 w-12 mx-auto mb-3 text-muted-foreground" />
                           <p className="font-medium">Click to upload or drag and drop</p>
-                          <p className="text-sm text-muted-foreground">MP4 or MP3 (max 1GB)</p>
+                          <p className="text-sm text-muted-foreground">Video (MP4, MOV, AVI, WEBM) or Audio (MP3, WAV, M4A) - Max 1GB</p>
                         </div>
                       )}
                     </label>

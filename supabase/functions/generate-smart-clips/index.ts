@@ -270,30 +270,53 @@ async function processVideoClips(videoUrl: string, clips: any[], supabase: any) 
     try {
       console.log(`Processing clip ${clip.id}: ${clip.start_time}s - ${clip.end_time}s`);
       
-      // Download source video
-      const videoResponse = await fetch(videoUrl);
-      if (!videoResponse.ok) {
-        throw new Error('Failed to download source video');
+      // Download source media file
+      const mediaResponse = await fetch(videoUrl);
+      if (!mediaResponse.ok) {
+        throw new Error('Failed to download source media');
       }
       
-      const videoBuffer = await videoResponse.arrayBuffer();
-      const tempVideoPath = `/tmp/source_${clip.id}.mp4`;
+      const mediaBuffer = await mediaResponse.arrayBuffer();
+      
+      // Detect file type from URL or content-type
+      const contentType = mediaResponse.headers.get('content-type') || '';
+      const isAudio = contentType.includes('audio') || videoUrl.match(/\.(mp3|wav|m4a)$/i);
+      const fileExtension = isAudio ? '.mp3' : '.mp4';
+      
+      const tempMediaPath = `/tmp/source_${clip.id}${fileExtension}`;
       const outputPath = `/tmp/clip_${clip.id}.mp4`;
       
-      // Write video to temp file
-      await Deno.writeFile(tempVideoPath, new Uint8Array(videoBuffer));
+      // Write media to temp file
+      await Deno.writeFile(tempMediaPath, new Uint8Array(mediaBuffer));
       
-      // Run FFmpeg to extract clip (lightweight, copy streams, no re-encode)
+      // Run FFmpeg to extract clip
       const duration = clip.end_time - clip.start_time;
+      
+      // For audio files, convert to video with waveform visualization
+      // For video files, use stream copy for efficiency
+      const ffmpegArgs = isAudio ? [
+        "-ss", clip.start_time.toString(),
+        "-i", tempMediaPath,
+        "-t", duration.toString(),
+        "-filter_complex", "[0:a]showwaves=s=1280x720:mode=line:colors=0x6366f1,format=yuv420p[v]",
+        "-map", "[v]",
+        "-map", "0:a",
+        "-c:v", "libx264",
+        "-c:a", "aac",
+        "-preset", "fast",
+        "-crf", "23",
+        outputPath
+      ] : [
+        "-ss", clip.start_time.toString(),
+        "-i", tempMediaPath,
+        "-t", duration.toString(),
+        "-c", "copy", // Copy streams for video, no re-encode
+        "-avoid_negative_ts", "make_zero",
+        outputPath
+      ];
+      
       const ffmpegCommand = new Deno.Command("ffmpeg", {
-        args: [
-          "-ss", clip.start_time.toString(),
-          "-i", tempVideoPath,
-          "-t", duration.toString(),
-          "-c", "copy", // Copy streams, no re-encode
-          "-avoid_negative_ts", "make_zero",
-          outputPath
-        ],
+        args: ffmpegArgs,
         stdout: "piped",
         stderr: "piped",
       });
@@ -303,7 +326,35 @@ async function processVideoClips(videoUrl: string, clips: any[], supabase: any) 
       if (!process.success) {
         const error = new TextDecoder().decode(process.stderr);
         console.error('FFmpeg error for clip', clip.id, ':', error);
-        continue; // Skip this clip, continue with others
+        
+        // Fallback: try without stream copy (re-encode) if copy failed
+        if (!isAudio) {
+          console.log('Retrying with re-encode for clip', clip.id);
+          const fallbackArgs = [
+            "-ss", clip.start_time.toString(),
+            "-i", tempMediaPath,
+            "-t", duration.toString(),
+            "-c:v", "libx264",
+            "-c:a", "aac",
+            "-preset", "fast",
+            "-crf", "23",
+            outputPath
+          ];
+          
+          const fallbackCommand = new Deno.Command("ffmpeg", {
+            args: fallbackArgs,
+            stdout: "piped",
+            stderr: "piped",
+          });
+          
+          const fallbackProcess = await fallbackCommand.output();
+          if (!fallbackProcess.success) {
+            console.error('Fallback FFmpeg also failed for clip', clip.id);
+            continue;
+          }
+        } else {
+          continue; // Skip this clip if audio processing failed
+        }
       }
       
       // Read processed clip
@@ -341,7 +392,7 @@ async function processVideoClips(videoUrl: string, clips: any[], supabase: any) 
       
       // Cleanup temp files
       try {
-        await Deno.remove(tempVideoPath);
+        await Deno.remove(tempMediaPath);
         await Deno.remove(outputPath);
       } catch (e) {
         console.warn('Temp file cleanup warning:', e);

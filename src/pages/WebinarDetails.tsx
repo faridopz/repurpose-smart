@@ -85,19 +85,25 @@ export default function WebinarDetails() {
   const handleStartTranscription = async () => {
     setTranscribing(true);
     try {
-      const { error } = await supabase.functions.invoke("transcribe-webinar", {
+      toast.info("Processing audio...");
+      
+      const { data, error } = await supabase.functions.invoke("transcribe-webinar", {
         body: { webinarId: id },
       });
 
-      if (error) throw error;
+      if (error) {
+        throw new Error("Unable to start transcription. Please try again.");
+      }
 
-      toast.success("Transcription started");
+      toast.success("Transcription started successfully!");
+      
       setTimeout(() => {
         refetchTranscript();
         setTranscribing(false);
       }, 2000);
     } catch (error: any) {
-      toast.error(error.message || "Failed to start transcription");
+      console.error("Transcription error:", error);
+      toast.error("Something went wrong while preparing your transcript. Please try again.");
       setTranscribing(false);
     }
   };

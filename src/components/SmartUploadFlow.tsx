@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { Upload, FileVideo, Loader2, CheckCircle2, Sparkles, FileText, TrendingUp } from "lucide-react";
+import { Upload, FileVideo, Loader2, CheckCircle2, Sparkles, FileText, TrendingUp, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,12 +9,20 @@ import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 interface SmartUploadFlowProps {
   userId: string;
 }
 
-type FlowStep = "upload" | "transcribing" | "analyzing" | "generating" | "success";
+type FlowStep = "upload" | "checking" | "preparing" | "processing" | "transcribing" | "analyzing" | "generating" | "success";
+
+interface Diagnostics {
+  upload_ms?: number;
+  transcribe_ms?: number;
+  fetch_ms?: number;
+  total_ms?: number;
+}
 
 export default function SmartUploadFlow({ userId }: SmartUploadFlowProps) {
   const navigate = useNavigate();
@@ -23,6 +31,9 @@ export default function SmartUploadFlow({ userId }: SmartUploadFlowProps) {
   const [file, setFile] = useState<File | null>(null);
   const [progress, setProgress] = useState(0);
   const [webinarId, setWebinarId] = useState<string | null>(null);
+  const [diagnostics, setDiagnostics] = useState<Diagnostics>({});
+  const [showDiagnostics, setShowDiagnostics] = useState(false);
+  const [statusMessage, setStatusMessage] = useState("");
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -131,11 +142,19 @@ export default function SmartUploadFlow({ userId }: SmartUploadFlowProps) {
     }
 
     try {
-      // Step 1: Upload
-      setStep("transcribing");
-      setProgress(10);
+      // Step 1: Checking file
+      setStep("checking");
+      setStatusMessage("Checking file...");
+      setProgress(5);
+      toast.info("Checking file...");
 
       const filePath = `${userId}/${Date.now()}_${file.name}`;
+      
+      // Step 2: Uploading
+      setStatusMessage("Preparing your webinar for transcription...");
+      setProgress(10);
+      toast.info("Preparing your webinar for transcription...");
+      
       const { error: uploadError } = await supabase.storage
         .from("webinars")
         .upload(filePath, file);
@@ -164,24 +183,41 @@ export default function SmartUploadFlow({ userId }: SmartUploadFlowProps) {
       if (dbError) throw dbError;
       setWebinarId(webinar.id);
 
-      setProgress(50);
+      // Step 3: Processing audio
+      setStep("processing");
+      setStatusMessage("Processing audio...");
+      setProgress(40);
+      toast.info("Processing audio...");
 
-      // Step 2: Start transcription
       const { data: transcriptData, error: transcriptError } = await supabase.functions.invoke("transcribe-webinar", {
         body: { webinarId: webinar.id },
       });
 
-      if (transcriptError) throw transcriptError;
+      if (transcriptError) {
+        throw new Error("Unable to start transcription. Please try again.");
+      }
 
+      // Store diagnostics if available
+      if (transcriptData?.diagnostics) {
+        setDiagnostics(transcriptData.diagnostics);
+      }
+
+      // Step 4: Transcription started
+      setStep("transcribing");
+      setStatusMessage("Transcription started successfully!");
       setProgress(60);
+      toast.success("Transcription started successfully!");
 
       // Start polling for transcription completion
-      await pollTranscription(transcriptData.transcriptId, webinar.id);
+      await pollTranscription(transcriptData.transcript_id, webinar.id);
 
     } catch (error: any) {
-      toast.error(error.message || "Processing failed");
+      console.error("Processing error:", error);
+      toast.error("Something went wrong while preparing your transcript. Please try again.");
       setStep("upload");
       setProgress(0);
+      setStatusMessage("");
+      setDiagnostics({});
     }
   };
 
@@ -263,13 +299,45 @@ export default function SmartUploadFlow({ userId }: SmartUploadFlowProps) {
           </motion.div>
         )}
 
+        {step === "checking" && (
+          <ProcessingStep
+            key="checking"
+            icon={<FileVideo className="h-12 w-12" />}
+            title="Checking file..."
+            description="Validating your upload"
+            progress={progress}
+            statusMessage={statusMessage}
+            diagnostics={diagnostics}
+            showDiagnostics={showDiagnostics}
+            setShowDiagnostics={setShowDiagnostics}
+          />
+        )}
+
+        {step === "processing" && (
+          <ProcessingStep
+            key="processing"
+            icon={<Loader2 className="h-12 w-12" />}
+            title="Processing audio..."
+            description="Getting everything ready for transcription"
+            progress={progress}
+            statusMessage={statusMessage}
+            diagnostics={diagnostics}
+            showDiagnostics={showDiagnostics}
+            setShowDiagnostics={setShowDiagnostics}
+          />
+        )}
+
         {step === "transcribing" && (
           <ProcessingStep
             key="transcribing"
             icon={<FileText className="h-12 w-12" />}
-            title="Transcribing Audio"
+            title="Transcription started successfully!"
             description="Converting speech to text with timestamps..."
             progress={progress}
+            statusMessage={statusMessage}
+            diagnostics={diagnostics}
+            showDiagnostics={showDiagnostics}
+            setShowDiagnostics={setShowDiagnostics}
           />
         )}
 
@@ -280,6 +348,10 @@ export default function SmartUploadFlow({ userId }: SmartUploadFlowProps) {
             title="Analyzing Highlights"
             description="Identifying key moments and sentiment peaks..."
             progress={progress}
+            statusMessage={statusMessage}
+            diagnostics={diagnostics}
+            showDiagnostics={showDiagnostics}
+            setShowDiagnostics={setShowDiagnostics}
           />
         )}
 
@@ -290,6 +362,10 @@ export default function SmartUploadFlow({ userId }: SmartUploadFlowProps) {
             title="Generating Content Ideas"
             description="Creating social posts and blog drafts..."
             progress={progress}
+            statusMessage={statusMessage}
+            diagnostics={diagnostics}
+            showDiagnostics={showDiagnostics}
+            setShowDiagnostics={setShowDiagnostics}
           />
         )}
 
@@ -328,12 +404,22 @@ function ProcessingStep({
   title,
   description,
   progress,
+  statusMessage,
+  diagnostics,
+  showDiagnostics,
+  setShowDiagnostics,
 }: {
   icon: React.ReactNode;
   title: string;
   description: string;
   progress: number;
+  statusMessage?: string;
+  diagnostics?: Diagnostics;
+  showDiagnostics?: boolean;
+  setShowDiagnostics?: (show: boolean) => void;
 }) {
+  const hasDiagnostics = diagnostics && Object.keys(diagnostics).length > 0;
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -354,6 +440,69 @@ function ProcessingStep({
         <Progress value={progress} className="h-3" />
         <p className="text-sm font-medium text-primary">{progress}% Complete</p>
       </div>
+
+      {hasDiagnostics && setShowDiagnostics && (
+        <Collapsible
+          open={showDiagnostics}
+          onOpenChange={setShowDiagnostics}
+          className="mt-6"
+        >
+          <CollapsibleTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="gap-2 text-muted-foreground hover:text-foreground"
+            >
+              {showDiagnostics ? (
+                <>
+                  <ChevronUp className="h-4 w-4" />
+                  Hide Details
+                </>
+              ) : (
+                <>
+                  <ChevronDown className="h-4 w-4" />
+                  View Logs
+                </>
+              )}
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <Card className="mt-3 bg-muted/50 border-muted">
+              <div className="p-4 text-left space-y-2">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                  Processing Diagnostics
+                </p>
+                <div className="space-y-1 text-sm font-mono">
+                  {diagnostics.fetch_ms !== undefined && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">File Fetch:</span>
+                      <span className="font-medium">{diagnostics.fetch_ms}ms</span>
+                    </div>
+                  )}
+                  {diagnostics.upload_ms !== undefined && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Upload Time:</span>
+                      <span className="font-medium">{diagnostics.upload_ms}ms</span>
+                    </div>
+                  )}
+                  {diagnostics.transcribe_ms !== undefined && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">API Response:</span>
+                      <span className="font-medium">{diagnostics.transcribe_ms}ms</span>
+                    </div>
+                  )}
+                  {diagnostics.total_ms !== undefined && (
+                    <div className="flex justify-between border-t border-muted pt-1 mt-1">
+                      <span className="text-muted-foreground font-semibold">Total:</span>
+                      <span className="font-semibold">{diagnostics.total_ms}ms</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </Card>
+          </CollapsibleContent>
+        </Collapsible>
+      )}
     </motion.div>
   );
 }

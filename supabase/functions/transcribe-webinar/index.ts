@@ -116,25 +116,28 @@ serve(async (req) => {
       const fetchTime = Date.now() - fetchStart;
       console.log(`[UPLOAD] File fetched in ${fetchTime}ms`);
 
-      // Stream upload to AssemblyAI
-      console.log('[UPLOAD] Uploading to AssemblyAI...');
+      // Stream upload to AssemblyAI (low memory usage)
+      console.log('[UPLOAD] Streaming file to AssemblyAI...');
       const uploadStart = Date.now();
       
       let uploadResponse;
       try {
-        const arrayBuffer = await audioResponse.arrayBuffer();
+        // Stream the body directly instead of buffering in memory
         uploadResponse = await fetch('https://api.assemblyai.com/v2/upload', {
           method: 'POST',
           headers: {
             'authorization': assemblyAiKey,
+            'Transfer-Encoding': 'chunked',
           },
-          body: arrayBuffer
+          body: audioResponse.body // Stream directly, no buffering
         });
 
         if (!uploadResponse.ok) {
           const errorText = await uploadResponse.text();
           throw new Error(`Upload failed: ${uploadResponse.status} - ${errorText}`);
         }
+        
+        console.log('[UPLOAD] Stream upload successful');
       } catch (e) {
         console.error('[UPLOAD] Upload error:', e);
         return new Response(

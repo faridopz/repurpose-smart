@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import { motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Loader2, FileText, Sparkles, Film } from "lucide-react";
+import { ArrowLeft, FileText, Loader2, Sparkles, Film, Video, Clock, FileVideo } from "lucide-react";
 import { toast } from "sonner";
 import ContentGenerationModal from "@/components/ContentGenerationModal";
 
@@ -32,7 +33,6 @@ export default function WebinarDetails() {
 
   const { data: transcript, refetch: refetchTranscript } = useQuery({
     queryKey: ["transcript", id],
-    enabled: !!id,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("transcripts")
@@ -40,14 +40,17 @@ export default function WebinarDetails() {
         .eq("webinar_id", id)
         .single();
 
-      if (error && error.code !== "PGRST116") throw error;
+      if (error) {
+        if (error.code === "PGRST116") return null;
+        throw error;
+      }
       return data;
     },
+    enabled: !!webinar,
   });
 
-  const { data: aiContent, refetch: refetchAiContent } = useQuery({
-    queryKey: ["ai-content", id],
-    enabled: !!id,
+  const { data: aiContent, refetch: refetchAIContent } = useQuery({
+    queryKey: ["ai_content", id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("ai_content")
@@ -57,54 +60,54 @@ export default function WebinarDetails() {
       if (error) throw error;
       return data;
     },
+    enabled: !!webinar,
   });
 
   const { data: snippets } = useQuery({
     queryKey: ["snippets", id],
-    enabled: !!id,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("snippets")
         .select("*")
         .eq("webinar_id", id)
-        .order("created_at", { ascending: false });
+        .order("start_time", { ascending: true });
 
       if (error) throw error;
       return data;
     },
+    enabled: !!webinar,
   });
 
   const handleStartTranscription = async () => {
     setTranscribing(true);
     try {
-      const { error } = await supabase.functions.invoke('transcribe-webinar', {
-        body: { webinarId: id }
+      const { error } = await supabase.functions.invoke("transcribe-webinar", {
+        body: { webinarId: id },
       });
 
       if (error) throw error;
 
-      toast.success("Transcription started!");
+      toast.success("Transcription started");
       setTimeout(() => {
         refetchTranscript();
+        setTranscribing(false);
       }, 2000);
     } catch (error: any) {
       toast.error(error.message || "Failed to start transcription");
-    } finally {
       setTranscribing(false);
     }
   };
 
   const handleSuggestHighlights = async () => {
     try {
-      toast.info("Analyzing webinar for highlights...");
-      const { error } = await supabase.functions.invoke('suggest-highlights', {
-        body: { webinarId: id }
+      const { error } = await supabase.functions.invoke("suggest-highlights", {
+        body: { webinarId: id },
       });
 
       if (error) throw error;
 
-      toast.success("Highlights suggested! Check the Clips page");
-      navigate('/clips');
+      toast.success("Highlights suggested successfully");
+      navigate("/clips");
     } catch (error: any) {
       toast.error(error.message || "Failed to suggest highlights");
     }
@@ -137,154 +140,296 @@ export default function WebinarDetails() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-8">
-        <div className="mb-6 space-y-4">
-          <div className="flex gap-4 flex-wrap">
-            <Button variant="outline" onClick={() => navigate("/dashboard")}>
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Dashboard
-            </Button>
-            {transcript && (
-              <>
-                <Button onClick={() => setShowGenerateModal(true)}>
-                  <Sparkles className="mr-2 h-4 w-4" />
-                  Generate Content
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="container mx-auto px-6 py-8 max-w-7xl"
+      >
+        {/* Header */}
+        <div className="mb-8">
+          <Button
+            variant="ghost"
+            onClick={() => navigate("/dashboard")}
+            className="mb-6 -ml-2"
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Dashboard
+          </Button>
+
+          <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+            <div>
+              <h1 className="text-4xl font-bold mb-3 text-gradient">{webinar.title}</h1>
+              <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                <div className="flex items-center gap-2">
+                  <Clock className="h-4 w-4" />
+                  {new Date(webinar.created_at).toLocaleDateString()}
+                </div>
+                <div className="flex items-center gap-2">
+                  <FileVideo className="h-4 w-4" />
+                  {(webinar.file_size / (1024 * 1024)).toFixed(2)} MB
+                </div>
+                <Badge variant={webinar.status === "uploaded" ? "secondary" : "default"}>
+                  {webinar.status}
+                </Badge>
+              </div>
+            </div>
+
+            <div className="flex gap-2 flex-wrap">
+              {!transcript && webinar?.status === "uploaded" && (
+                <Button onClick={handleStartTranscription} disabled={transcribing} size="lg">
+                  {transcribing ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Starting...
+                    </>
+                  ) : (
+                    <>
+                      <FileText className="mr-2 h-4 w-4" />
+                      Start Processing
+                    </>
+                  )}
                 </Button>
-                <Button variant="outline" onClick={handleSuggestHighlights}>
-                  <Film className="mr-2 h-4 w-4" />
-                  Suggest Highlights
-                </Button>
-              </>
-            )}
-            {!transcript && webinar?.status === 'uploaded' && (
-              <Button onClick={handleStartTranscription} disabled={transcribing}>
-                {transcribing ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Starting...
-                  </>
-                ) : (
-                  <>
-                    <FileText className="mr-2 h-4 w-4" />
-                    Start Transcription
-                  </>
-                )}
-              </Button>
-            )}
+              )}
+              {transcript && (
+                <>
+                  <Button onClick={() => setShowGenerateModal(true)} size="lg">
+                    <Sparkles className="mr-2 h-4 w-4" />
+                    Generate Content
+                  </Button>
+                  <Button variant="outline" onClick={handleSuggestHighlights} size="lg">
+                    <Film className="mr-2 h-4 w-4" />
+                    Find Highlights
+                  </Button>
+                </>
+              )}
+            </div>
           </div>
         </div>
 
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">{webinar.title}</h1>
-          <p className="text-muted-foreground">
-            Uploaded {new Date(webinar.created_at).toLocaleDateString()}
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          <Card>
-            <CardHeader>
-              <CardTitle>Webinar Video</CardTitle>
-              <CardDescription>Original uploaded file</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {webinar.file_type.startsWith("video/") ? (
-                <video
-                  controls
-                  className="w-full rounded-lg"
-                  src={webinar.file_url}
-                >
-                  Your browser does not support the video tag.
-                </video>
-              ) : (
-                <audio controls className="w-full" src={webinar.file_url}>
-                  Your browser does not support the audio tag.
-                </audio>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>File Information</CardTitle>
-              <CardDescription>Details about the upload</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Status:</span>
-                <span className="font-medium capitalize">{webinar.status}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">File Type:</span>
-                <span className="font-medium">{webinar.file_type}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">File Size:</span>
-                <span className="font-medium">
-                  {(webinar.file_size / 1024 / 1024).toFixed(2)} MB
-                </span>
-              </div>
-              {webinar.duration_seconds && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Duration:</span>
-                  <span className="font-medium">
-                    {Math.floor(webinar.duration_seconds / 60)}:
-                    {String(webinar.duration_seconds % 60).padStart(2, "0")}
-                  </span>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-
-        <Tabs defaultValue="transcript" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="transcript">
-              <FileText className="mr-2 h-4 w-4" />
+        {/* Main Content Tabs */}
+        <Tabs defaultValue="video" className="space-y-6">
+          <TabsList className="bg-card border">
+            <TabsTrigger value="video" className="gap-2">
+              <Video className="h-4 w-4" />
+              Video
+            </TabsTrigger>
+            <TabsTrigger value="transcript" className="gap-2">
+              <FileText className="h-4 w-4" />
               Transcript
             </TabsTrigger>
-            <TabsTrigger value="ai-content">
-              <Sparkles className="mr-2 h-4 w-4" />
+            <TabsTrigger value="highlights" className="gap-2">
+              <Film className="h-4 w-4" />
+              Highlights
+              {snippets && snippets.length > 0 && (
+                <Badge variant="secondary" className="ml-1">{snippets.length}</Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="content" className="gap-2">
+              <Sparkles className="h-4 w-4" />
               AI Content
+              {aiContent && aiContent.length > 0 && (
+                <Badge variant="secondary" className="ml-1">{aiContent.length}</Badge>
+              )}
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="transcript" className="mt-6">
+          {/* Video Tab */}
+          <TabsContent value="video">
             <Card>
               <CardHeader>
-                <CardTitle>Transcript</CardTitle>
-                <CardDescription>
-                  {transcript ? "Transcription complete" : "No transcript available yet"}
-                </CardDescription>
+                <CardTitle>Webinar Recording</CardTitle>
+                <CardDescription>Original uploaded file</CardDescription>
               </CardHeader>
               <CardContent>
-                {transcript ? (
-                  <div className="prose prose-invert max-w-none">
-                    <p className="whitespace-pre-wrap">{transcript.full_text}</p>
-                  </div>
+                {webinar.file_type.startsWith("video/") ? (
+                  <video
+                    controls
+                    className="w-full rounded-lg border bg-black"
+                    src={webinar.file_url}
+                  >
+                    Your browser does not support the video tag.
+                  </video>
                 ) : (
-                  <div className="text-center py-12">
-                    <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                    <p className="text-muted-foreground">
-                      Transcript will appear here once processing is complete
-                    </p>
+                  <div className="p-8 border rounded-lg bg-muted/20">
+                    <audio controls className="w-full" src={webinar.file_url}>
+                      Your browser does not support the audio tag.
+                    </audio>
                   </div>
                 )}
               </CardContent>
             </Card>
           </TabsContent>
 
-          <TabsContent value="ai-content" className="mt-6">
+          {/* Transcript Tab */}
+          <TabsContent value="transcript">
+            <Card>
+              <CardHeader>
+                <CardTitle>Transcript</CardTitle>
+                <CardDescription>
+                  {transcript ? "AI-generated transcript with timestamps" : "No transcript available"}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {transcript ? (
+                  <div className="space-y-4">
+                    {transcript.full_text ? (
+                      <div className="prose prose-sm max-w-none">
+                        <p className="whitespace-pre-wrap text-foreground">{transcript.full_text}</p>
+                      </div>
+                    ) : (
+                      <p className="text-muted-foreground italic">
+                        Transcript is being processed...
+                      </p>
+                    )}
+                    
+                    {transcript.keywords && transcript.keywords.length > 0 && (
+                      <div className="pt-4 border-t">
+                        <h3 className="font-semibold mb-3">Keywords</h3>
+                        <div className="flex flex-wrap gap-2">
+                          {transcript.keywords.map((keyword: string, idx: number) => (
+                            <Badge key={idx} variant="secondary">{keyword}</Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {transcript.quotes && transcript.quotes.length > 0 && (
+                      <div className="pt-4 border-t">
+                        <h3 className="font-semibold mb-3">Key Quotes</h3>
+                        <div className="space-y-2">
+                          {transcript.quotes.map((quote: string, idx: number) => (
+                            <blockquote key={idx} className="border-l-4 border-primary pl-4 italic text-muted-foreground">
+                              "{quote}"
+                            </blockquote>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                    <p className="text-muted-foreground mb-4">No transcript yet</p>
+                    {webinar?.status === "uploaded" && (
+                      <Button onClick={handleStartTranscription} disabled={transcribing}>
+                        {transcribing ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Starting...
+                          </>
+                        ) : (
+                          <>
+                            <FileText className="mr-2 h-4 w-4" />
+                            Start Transcription
+                          </>
+                        )}
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Highlights Tab */}
+          <TabsContent value="highlights">
+            <Card>
+              <CardHeader>
+                <CardTitle>Suggested Highlights</CardTitle>
+                <CardDescription>
+                  {snippets && snippets.length > 0
+                    ? "AI-suggested video clips from key moments"
+                    : "No highlights available"}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {snippets && snippets.length > 0 ? (
+                  <div className="grid gap-4">
+                    {snippets.map((snippet) => (
+                      <motion.div
+                        key={snippet.id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="border rounded-lg p-4 hover:border-primary transition-colors"
+                      >
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex-1">
+                            <h4 className="font-semibold mb-1">{snippet.reason || "Highlight"}</h4>
+                            <p className="text-sm text-muted-foreground">
+                              {Math.floor(snippet.start_time)}s - {Math.floor(snippet.end_time)}s
+                            </p>
+                          </div>
+                          <Badge>{snippet.status}</Badge>
+                        </div>
+                        {snippet.transcript_chunk && (
+                          <p className="text-sm text-muted-foreground italic mt-2">
+                            "{snippet.transcript_chunk}"
+                          </p>
+                        )}
+                        {snippet.tags && snippet.tags.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-3">
+                            {snippet.tags.map((tag, idx) => (
+                              <Badge key={idx} variant="outline" className="text-xs">
+                                {tag}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
+                      </motion.div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <Film className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                    <p className="text-muted-foreground mb-4">No highlights yet</p>
+                    {transcript && (
+                      <Button onClick={handleSuggestHighlights}>
+                        <Sparkles className="mr-2 h-4 w-4" />
+                        Suggest Highlights
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* AI Content Tab */}
+          <TabsContent value="content">
             <Card>
               <CardHeader>
                 <CardTitle>AI-Generated Content</CardTitle>
-                <CardDescription>Content generated from transcript</CardDescription>
+                <CardDescription>
+                  {aiContent && aiContent.length > 0
+                    ? "Social posts and content generated from your webinar"
+                    : "No content generated yet"}
+                </CardDescription>
               </CardHeader>
               <CardContent>
-                {!aiContent || aiContent.length === 0 ? (
-                  <div className="text-center py-8">
-                    <Sparkles className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                    <p className="text-muted-foreground mb-4">No AI content generated yet</p>
+                {aiContent && aiContent.length > 0 ? (
+                  <div className="space-y-4">
+                    {aiContent.map((content) => (
+                      <motion.div
+                        key={content.id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="border rounded-lg p-4"
+                      >
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="secondary">{content.content_type}</Badge>
+                            {content.platform && <Badge variant="outline">{content.platform}</Badge>}
+                          </div>
+                          <Badge variant="outline">{content.tone}</Badge>
+                        </div>
+                        <p className="whitespace-pre-wrap text-sm">{content.content}</p>
+                      </motion.div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <Sparkles className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                    <p className="text-muted-foreground mb-4">No AI content yet</p>
                     {transcript && (
                       <Button onClick={() => setShowGenerateModal(true)}>
                         <Sparkles className="mr-2 h-4 w-4" />
@@ -292,69 +437,20 @@ export default function WebinarDetails() {
                       </Button>
                     )}
                   </div>
-                ) : (
-                  <div className="space-y-4">
-                    {aiContent.map((content: any) => (
-                      <div key={content.id} className="p-4 border rounded-lg space-y-2">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <Badge variant="secondary">{content.content_type}</Badge>
-                          {content.platform && <Badge variant="outline">{content.platform}</Badge>}
-                          {content.tone && <Badge variant="outline">{content.tone}</Badge>}
-                        </div>
-                        <p className="text-sm whitespace-pre-wrap line-clamp-4">
-                          {typeof content.content === 'string' 
-                            ? content.content 
-                            : JSON.stringify(content.content, null, 2)}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
                 )}
               </CardContent>
             </Card>
-
-            {snippets && snippets.length > 0 && (
-              <Card className="mt-6">
-                <CardHeader>
-                  <CardTitle>Suggested Highlights</CardTitle>
-                  <CardDescription>{snippets.length} clips suggested</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {snippets.slice(0, 3).map((snippet: any) => (
-                      <div key={snippet.id} className="p-3 border rounded-lg">
-                        <div className="flex items-start justify-between mb-2">
-                          <p className="text-sm font-medium">{snippet.reason}</p>
-                          <Badge variant="secondary">{snippet.status}</Badge>
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          {Math.floor(snippet.start_time / 60)}:{String(Math.floor(snippet.start_time % 60)).padStart(2, '0')} - {Math.floor(snippet.end_time / 60)}:{String(Math.floor(snippet.end_time % 60)).padStart(2, '0')}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                  <Button variant="outline" className="w-full mt-4" onClick={() => navigate('/clips')}>
-                    <Film className="mr-2 h-4 w-4" />
-                    View All Clips
-                  </Button>
-                </CardContent>
-              </Card>
-            )}
           </TabsContent>
         </Tabs>
-      </div>
+      </motion.div>
 
-      {webinar && (
-        <ContentGenerationModal
-          open={showGenerateModal}
-          onOpenChange={(open) => {
-            setShowGenerateModal(open);
-            if (!open) refetchAiContent();
-          }}
-          webinarId={webinar.id}
-          webinarTitle={webinar.title}
-        />
-      )}
+      {/* Content Generation Modal */}
+      <ContentGenerationModal
+        open={showGenerateModal}
+        onOpenChange={setShowGenerateModal}
+        webinarId={id!}
+        webinarTitle={webinar.title}
+      />
     </div>
   );
 }

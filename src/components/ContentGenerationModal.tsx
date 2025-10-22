@@ -79,6 +79,7 @@ export default function ContentGenerationModal({
 
       toast.success('Content generated successfully!');
       onOpenChange(false);
+      window.location.reload(); // Refresh to show new content
     } catch (error: any) {
       console.error('Generation error:', error);
       toast.error(error.message || 'Failed to generate content');

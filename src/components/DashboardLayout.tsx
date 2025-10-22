@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { User, Session } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Video, FileText, Sparkles, BarChart3, Settings, LogOut, Film } from "lucide-react";
+import { Video, FileText, Sparkles, BarChart3, Settings, LogOut, Film, Upload } from "lucide-react";
 import { toast } from "sonner";
 import UploadTab from "./tabs/UploadTab";
 import TranscriptsTab from "./tabs/TranscriptsTab";
@@ -66,19 +66,28 @@ export default function DashboardLayout() {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-50 border-b bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80">
-        <div className="container mx-auto px-4 py-3">
+      <header className="fixed top-0 left-0 right-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/90">
+        <div className="container mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-primary rounded-lg">
-                <Video className="h-5 w-5 text-primary-foreground" />
+            <div className="flex items-center gap-4">
+              <div className="p-2.5 bg-gradient-primary rounded-xl">
+                <Video className="h-6 w-6 text-white" />
               </div>
               <div>
-                <h1 className="text-xl font-bold">WebinarAI</h1>
+                <h1 className="text-2xl font-bold text-gradient">WebinarAI</h1>
                 <p className="text-xs text-muted-foreground">Transform webinars into content</p>
               </div>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setActiveTab("uploads")}
+                className="hidden sm:flex"
+              >
+                <Upload className="h-4 w-4 mr-2" />
+                Upload
+              </Button>
               <span className="text-sm text-muted-foreground hidden md:inline">{user.email}</span>
               <Button variant="ghost" size="sm" onClick={handleSignOut}>
                 <LogOut className="h-4 w-4 mr-2" />
@@ -89,7 +98,7 @@ export default function DashboardLayout() {
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-6 max-w-7xl">
+      <main className="container mx-auto px-6 py-6 max-w-7xl pt-24">
         {/* Process Flow Guide */}
         <div className="mb-8 bg-card border rounded-lg p-6">
           <h2 className="text-sm font-semibold text-muted-foreground mb-4">YOUR WORKFLOW</h2>

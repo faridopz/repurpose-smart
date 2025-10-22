@@ -120,16 +120,39 @@ export default function WebinarDetails() {
   const handleGenerateSmartClips = async () => {
     setGeneratingClips(true);
     try {
-      const { error } = await supabase.functions.invoke("generate-smart-clips", {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      const { data, error } = await supabase.functions.invoke("generate-smart-clips", {
         body: { 
           webinarId: id,
           clipContext: clipContext.trim() || null
         },
+        headers: {
+          Authorization: `Bearer ${session?.access_token}`
+        }
       });
 
-      if (error) throw error;
+      if (error) {
+        // Check if limit reached
+        if (error.message?.includes('limit reached')) {
+          toast.error(error.message, {
+            description: "Upgrade to Pro for 30 clips/month or Enterprise for unlimited clips",
+            duration: 6000
+          });
+        } else {
+          throw error;
+        }
+        return;
+      }
 
-      toast.success("Smart clips generated successfully! Check the Clips tab.");
+      const remainingMsg = data.remainingClips === -1 
+        ? "Unlimited clips available" 
+        : `${data.remainingClips} clips remaining this month`;
+
+      toast.success(data.message || "Smart clips generated!", {
+        description: remainingMsg
+      });
+      
       navigate("/clips");
     } catch (error: any) {
       toast.error(error.message || "Failed to generate smart clips");

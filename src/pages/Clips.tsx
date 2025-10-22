@@ -9,11 +9,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Loader2, Film, Plus, Search, Download, Folder, Tag, Sparkles, Edit, Wand2 } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { Loader2, Film, Plus, Search, Download, Folder, Tag, Sparkles, Edit, Wand2, Lock, Crown, Video } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import EmptyState from "@/components/EmptyState";
 import { openAIAssistant } from "@/components/AIAssistant";
+import { useUserRole } from "@/hooks/useUserRole";
+import UpgradeModal from "@/components/UpgradeModal";
+import ClipProcessingProgress from "@/components/ClipProcessingProgress";
 
 export default function Clips() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -24,7 +28,10 @@ export default function Clips() {
   const [renamingCollection, setRenamingCollection] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
   const [autoTagging, setAutoTagging] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [upgradeFeature, setUpgradeFeature] = useState("");
   const navigate = useNavigate();
+  const { role, limits, hasAccess } = useUserRole();
 
   const { data: user } = useQuery({
     queryKey: ["user"],
@@ -276,6 +283,12 @@ export default function Clips() {
 
   return (
     <div className="min-h-screen bg-background">
+      <UpgradeModal 
+        open={showUpgradeModal} 
+        onOpenChange={setShowUpgradeModal}
+        feature={upgradeFeature}
+      />
+      
       <header className="border-b bg-card">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
@@ -288,7 +301,23 @@ export default function Clips() {
               </div>
               <h1 className="text-xl font-bold">Clips Library</h1>
             </div>
-            <Badge variant="secondary">{snippets.length} clips</Badge>
+            <div className="flex items-center gap-3">
+              <Badge variant="secondary">{snippets.length} clips</Badge>
+              {role && (
+                <Badge 
+                  className={
+                    role === 'enterprise' 
+                      ? 'bg-gradient-to-r from-purple-500 to-pink-400 text-white border-0' 
+                      : role === 'pro'
+                      ? 'bg-gradient-to-r from-orange-500 to-amber-400 text-white border-0'
+                      : 'bg-muted'
+                  }
+                >
+                  {role === 'enterprise' ? <Crown className="h-3 w-3 mr-1" /> : null}
+                  {role.toUpperCase()}
+                </Badge>
+              )}
+            </div>
           </div>
         </div>
       </header>
@@ -310,11 +339,33 @@ export default function Clips() {
                   )}
                   Auto-Tag ({selectedSnippets.length})
                 </Button>
-                <Button onClick={handleAIRecommend} className="bg-gradient-to-r from-orange-500 to-amber-400">
+                <Button 
+                  onClick={() => {
+                    if (!hasAccess('pro')) {
+                      setUpgradeFeature("AI Recommendations");
+                      setShowUpgradeModal(true);
+                      return;
+                    }
+                    handleAIRecommend();
+                  }}
+                  className="bg-gradient-to-r from-orange-500 to-amber-400"
+                >
+                  {!hasAccess('pro') && <Lock className="mr-2 h-4 w-4" />}
                   <Sparkles className="mr-2 h-4 w-4" />
                   AI Recommend
                 </Button>
-                <Button onClick={handleGeneratePosts} className="bg-gradient-to-r from-orange-500 to-amber-400">
+                <Button 
+                  onClick={() => {
+                    if (!hasAccess('pro')) {
+                      setUpgradeFeature("AI Content Generation");
+                      setShowUpgradeModal(true);
+                      return;
+                    }
+                    handleGeneratePosts();
+                  }}
+                  className="bg-gradient-to-r from-orange-500 to-amber-400"
+                >
+                  {!hasAccess('pro') && <Lock className="mr-2 h-4 w-4" />}
                   <Wand2 className="mr-2 h-4 w-4" />
                   Generate Posts
                 </Button>
@@ -442,7 +493,9 @@ export default function Clips() {
           />
         </div>
 
-        <Tabs defaultValue="suggested" className="space-y-4">
+        {user && <ClipProcessingProgress userId={user.id} />}
+
+        <Tabs defaultValue="suggested" className="space-y-4 mt-6">
           <TabsList>
             <TabsTrigger value="suggested">
               Suggested ({suggestedSnippets?.length || 0})

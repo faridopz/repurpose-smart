@@ -14,13 +14,85 @@ serve(async (req) => {
   try {
     const { webinarId, clipContext } = await req.json();
     
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const openaiApiKey = Deno.env.get('OPENAI_API_KEY')!;
+    // Get authorization token
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      throw new Error('No authorization header');
+    }
     
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const lovableApiKey = Deno.env.get('LOVABLE_API_KEY')!;
+    
+    // Create supabase client with service role for operations
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+    
+    // Create client with user token for auth checks
+    const supabase = createClient(
+      supabaseUrl,
+      supabaseServiceKey,
+      { global: { headers: { Authorization: authHeader } } }
+    );
 
     console.log('Generating smart clips for webinar:', webinarId, 'with context:', clipContext);
+    
+    // Get authenticated user
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
+      throw new Error('Unauthorized');
+    }
+
+    // Check user's role and clip limits
+    const { data: userRole } = await supabaseAdmin
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id)
+      .maybeSingle();
+    
+    const role = userRole?.role || 'free';
+    
+    // Check monthly clip limit
+    const { data: profile } = await supabaseAdmin
+      .from('profiles')
+      .select('clips_generated_this_month, last_clip_reset_date')
+      .eq('id', user.id)
+      .single();
+    
+    // Reset counter if new month
+    const lastReset = profile?.last_clip_reset_date ? new Date(profile.last_clip_reset_date) : new Date();
+    const now = new Date();
+    const shouldReset = now.getMonth() !== lastReset.getMonth() || now.getFullYear() !== lastReset.getFullYear();
+    
+    let clipsGeneratedThisMonth = profile?.clips_generated_this_month || 0;
+    if (shouldReset) {
+      clipsGeneratedThisMonth = 0;
+      await supabaseAdmin
+        .from('profiles')
+        .update({ 
+          clips_generated_this_month: 0, 
+          last_clip_reset_date: now.toISOString() 
+        })
+        .eq('id', user.id);
+    }
+    
+    // Check limits
+    const limits: Record<string, number> = {
+      'free': 5,
+      'pro': 30,
+      'enterprise': -1, // unlimited
+    };
+    
+    const monthlyLimit = limits[role] || 5;
+    if (monthlyLimit !== -1 && clipsGeneratedThisMonth >= monthlyLimit) {
+      return new Response(
+        JSON.stringify({ 
+          error: `Monthly clip limit reached (${monthlyLimit}). Upgrade to Pro for more clips.`,
+          limitReached: true,
+          currentPlan: role 
+        }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // Get transcript and webinar data
     const { data: transcript, error: transcriptError } = await supabase
@@ -60,32 +132,70 @@ Return ONLY a valid JSON array with no additional text.`;
 
     const userPrompt = `Transcript:\n\n${transcript.full_text}\n\nSentiment timeline: ${JSON.stringify(transcript.sentiment_timeline || [])}\n\nKeywords: ${JSON.stringify(transcript.keywords || [])}`;
 
-    // Call OpenAI to analyze and identify clips
-    const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+    // Call Lovable AI to analyze and identify clips
+    const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${openaiApiKey}`,
+        'Authorization': `Bearer ${lovableApiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4-turbo',
+        model: 'google/gemini-2.5-flash',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt }
         ],
-        temperature: 0.7,
-        max_tokens: 2000,
+        tools: [{
+          type: 'function',
+          function: {
+            name: 'suggest_clips',
+            description: 'Return 3-7 video clip suggestions from transcript',
+            parameters: {
+              type: 'object',
+              properties: {
+                clips: {
+                  type: 'array',
+                  items: {
+                    type: 'object',
+                    properties: {
+                      start_time: { type: 'number', description: 'Start time in seconds' },
+                      end_time: { type: 'number', description: 'End time in seconds (30-90s duration)' },
+                      title: { type: 'string', description: 'Catchy title, 5-8 words' },
+                      category: { type: 'string', enum: ['Motivational', 'Insightful', 'Funny', 'Educational', 'Story', 'Quote'] },
+                      reason: { type: 'string', description: 'Why this moment is valuable' },
+                      transcript_excerpt: { type: 'string', description: 'Key part of transcript' }
+                    },
+                    required: ['start_time', 'end_time', 'title', 'category', 'reason', 'transcript_excerpt']
+                  }
+                }
+              },
+              required: ['clips']
+            }
+          }
+        }],
+        tool_choice: { type: 'function', function: { name: 'suggest_clips' } }
       }),
     });
 
-    if (!openaiResponse.ok) {
-      const error = await openaiResponse.text();
-      console.error('OpenAI API error:', error);
+    if (!aiResponse.ok) {
+      const error = await aiResponse.text();
+      console.error('AI API error:', error);
+      if (aiResponse.status === 429) {
+        throw new Error('AI rate limit exceeded. Please try again later.');
+      }
+      if (aiResponse.status === 402) {
+        throw new Error('AI credits exhausted. Please add credits to continue.');
+      }
       throw new Error('Failed to analyze transcript for clips');
     }
 
-    const openaiData = await openaiResponse.json();
-    const clipSuggestions = JSON.parse(openaiData.choices[0].message.content);
+    const aiData = await aiResponse.json();
+    const toolCall = aiData.choices[0].message.tool_calls?.[0];
+    if (!toolCall || toolCall.function.name !== 'suggest_clips') {
+      throw new Error('AI did not return clip suggestions in expected format');
+    }
+    
+    const clipSuggestions = JSON.parse(toolCall.function.arguments).clips;
 
     console.log('AI identified', clipSuggestions.length, 'clips');
 
@@ -99,12 +209,12 @@ Return ONLY a valid JSON array with no additional text.`;
       transcript_chunk: clip.transcript_excerpt,
       tags: [clip.category.toLowerCase(), 'ai-generated', clipContext?.toLowerCase()].filter(Boolean),
       status: 'suggested',
-      url: null, // Will be generated when user exports/downloads
+      url: null,
       thumbnail_url: null,
     }));
 
-    // Insert clips into database
-    const { data: insertedClips, error: insertError } = await supabase
+    // Insert clips into database using admin client
+    const { data: insertedClips, error: insertError } = await supabaseAdmin
       .from('snippets')
       .insert(clipRecords)
       .select();
@@ -114,14 +224,28 @@ Return ONLY a valid JSON array with no additional text.`;
       throw insertError;
     }
 
+    // Update user's monthly clip counter
+    await supabaseAdmin
+      .from('profiles')
+      .update({ 
+        clips_generated_this_month: clipsGeneratedThisMonth + clipSuggestions.length 
+      })
+      .eq('id', user.id);
+
     console.log('Successfully created', insertedClips.length, 'smart clips');
+
+    // Start background task for FFmpeg video clipping (async, non-blocking)
+    // Process clips in background without blocking response
+    processVideoClips(webinar.file_url, insertedClips, supabaseAdmin)
+      .catch(err => console.error('Background video processing error:', err));
 
     return new Response(
       JSON.stringify({ 
         success: true, 
         count: insertedClips.length,
         clips: insertedClips,
-        message: `${insertedClips.length} smart clips generated successfully` 
+        message: `${insertedClips.length} smart clips generated! Video processing started in background.`,
+        remainingClips: monthlyLimit === -1 ? -1 : monthlyLimit - (clipsGeneratedThisMonth + clipSuggestions.length)
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
@@ -129,8 +253,105 @@ Return ONLY a valid JSON array with no additional text.`;
   } catch (error) {
     console.error('Smart clip generation error:', error);
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
+      JSON.stringify({ 
+        error: error instanceof Error ? error.message : 'Unknown error',
+        details: error instanceof Error ? error.stack : undefined
+      }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });
+
+// Background video processing with FFmpeg
+async function processVideoClips(videoUrl: string, clips: any[], supabase: any) {
+  console.log('Starting background video processing for', clips.length, 'clips');
+  
+  for (const clip of clips) {
+    try {
+      console.log(`Processing clip ${clip.id}: ${clip.start_time}s - ${clip.end_time}s`);
+      
+      // Download source video
+      const videoResponse = await fetch(videoUrl);
+      if (!videoResponse.ok) {
+        throw new Error('Failed to download source video');
+      }
+      
+      const videoBuffer = await videoResponse.arrayBuffer();
+      const tempVideoPath = `/tmp/source_${clip.id}.mp4`;
+      const outputPath = `/tmp/clip_${clip.id}.mp4`;
+      
+      // Write video to temp file
+      await Deno.writeFile(tempVideoPath, new Uint8Array(videoBuffer));
+      
+      // Run FFmpeg to extract clip (lightweight, copy streams, no re-encode)
+      const duration = clip.end_time - clip.start_time;
+      const ffmpegCommand = new Deno.Command("ffmpeg", {
+        args: [
+          "-ss", clip.start_time.toString(),
+          "-i", tempVideoPath,
+          "-t", duration.toString(),
+          "-c", "copy", // Copy streams, no re-encode
+          "-avoid_negative_ts", "make_zero",
+          outputPath
+        ],
+        stdout: "piped",
+        stderr: "piped",
+      });
+      
+      const process = await ffmpegCommand.output();
+      
+      if (!process.success) {
+        const error = new TextDecoder().decode(process.stderr);
+        console.error('FFmpeg error for clip', clip.id, ':', error);
+        continue; // Skip this clip, continue with others
+      }
+      
+      // Read processed clip
+      const clipData = await Deno.readFile(outputPath);
+      
+      // Upload to Supabase storage
+      const fileName = `${clip.id}_${clip.start_time}-${clip.end_time}.mp4`;
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('webinars')
+        .upload(`clips/${fileName}`, clipData, {
+          contentType: 'video/mp4',
+          upsert: true
+        });
+      
+      if (uploadError) {
+        console.error('Upload error for clip', clip.id, ':', uploadError);
+        continue;
+      }
+      
+      // Get public URL
+      const { data: urlData } = supabase.storage
+        .from('webinars')
+        .getPublicUrl(`clips/${fileName}`);
+      
+      // Update snippet with video URL
+      await supabase
+        .from('snippets')
+        .update({ 
+          url: urlData.publicUrl,
+          status: 'created'
+        })
+        .eq('id', clip.id);
+      
+      console.log(`Clip ${clip.id} processed and uploaded successfully`);
+      
+      // Cleanup temp files
+      try {
+        await Deno.remove(tempVideoPath);
+        await Deno.remove(outputPath);
+      } catch (e) {
+        console.warn('Temp file cleanup warning:', e);
+      }
+      
+    } catch (error) {
+      console.error('Error processing clip', clip.id, ':', error);
+      // Continue with next clip
+    }
+  }
+  
+  console.log('Background video processing complete');
+}

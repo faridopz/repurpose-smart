@@ -5,9 +5,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2, Key, Info } from "lucide-react";
+import { Loader2, Key, Info, Film, Crown, Zap } from "lucide-react";
+import { useUserRole } from "@/hooks/useUserRole";
+import UpgradeModal from "@/components/UpgradeModal";
 
 interface SettingsTabProps {
   userId: string;
@@ -17,6 +21,9 @@ export default function SettingsTab({ userId }: SettingsTabProps) {
   const [loading, setLoading] = useState(false);
   const [fullName, setFullName] = useState("");
   const [tonePreference, setTonePreference] = useState("professional");
+  const [clipsGenerated, setClipsGenerated] = useState(0);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const { role, limits } = useUserRole();
 
   useEffect(() => {
     loadProfile();
@@ -35,6 +42,7 @@ export default function SettingsTab({ userId }: SettingsTabProps) {
       if (data) {
         setFullName(data.full_name || "");
         setTonePreference(data.tone_preference || "professional");
+        setClipsGenerated(data.clips_generated_this_month || 0);
       }
     } catch (error: any) {
       console.error("Error loading profile:", error);
@@ -65,6 +73,116 @@ export default function SettingsTab({ userId }: SettingsTabProps) {
 
   return (
     <div className="space-y-6">
+      <UpgradeModal 
+        open={showUpgradeModal}
+        onOpenChange={setShowUpgradeModal}
+        feature="More Smart Clips"
+      />
+
+      {/* Clip Usage Card */}
+      <Card className={
+        role === 'enterprise'
+          ? 'border-purple-500/20 bg-gradient-to-br from-background to-purple-500/5'
+          : role === 'pro'
+          ? 'border-orange-500/20 bg-gradient-to-br from-background to-orange-500/5'
+          : 'border-border'
+      }>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              {role === 'enterprise' ? (
+                <div className="p-2 bg-gradient-to-br from-purple-500 to-pink-400 rounded-lg">
+                  <Crown className="h-5 w-5 text-white" />
+                </div>
+              ) : role === 'pro' ? (
+                <div className="p-2 bg-gradient-to-br from-orange-500 to-amber-400 rounded-lg">
+                  <Zap className="h-5 w-5 text-white" />
+                </div>
+              ) : (
+                <div className="p-2 bg-muted rounded-lg">
+                  <Film className="h-5 w-5" />
+                </div>
+              )}
+              <div>
+                <CardTitle>Smart Clip Usage</CardTitle>
+                <CardDescription>Monthly AI-powered clip generation</CardDescription>
+              </div>
+            </div>
+            <Badge 
+              className={
+                role === 'enterprise' 
+                  ? 'bg-gradient-to-r from-purple-500 to-pink-400 text-white border-0' 
+                  : role === 'pro'
+                  ? 'bg-gradient-to-r from-orange-500 to-amber-400 text-white border-0'
+                  : 'bg-muted'
+              }
+            >
+              {role?.toUpperCase() || 'FREE'}
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">
+                {limits.clipsPerMonth === -1 
+                  ? `${clipsGenerated} clips generated this month` 
+                  : `${clipsGenerated} / ${limits.clipsPerMonth} clips used`}
+              </span>
+              <span className="font-medium">
+                {limits.clipsPerMonth === -1 
+                  ? 'Unlimited' 
+                  : `${limits.clipsPerMonth - clipsGenerated} remaining`}
+              </span>
+            </div>
+            {limits.clipsPerMonth !== -1 && (
+              <Progress 
+                value={(clipsGenerated / limits.clipsPerMonth) * 100} 
+                className="h-2"
+              />
+            )}
+          </div>
+          
+          {role === 'free' && (
+            <Alert>
+              <Info className="h-4 w-4" />
+              <AlertDescription>
+                Free plan includes {limits.clipsPerMonth} smart clips per month. 
+                Upgrade to Pro for 30 clips/month or Enterprise for unlimited clips.
+              </AlertDescription>
+            </Alert>
+          )}
+
+          <div className="grid gap-3 pt-2">
+            <div className="flex items-center justify-between text-sm">
+              <span>Custom brand colors</span>
+              <Badge variant={limits.customBranding ? "default" : "secondary"}>
+                {limits.customBranding ? "Enabled" : "Pro"}
+              </Badge>
+            </div>
+            <div className="flex items-center justify-between text-sm">
+              <span>Logo upload</span>
+              <Badge variant={limits.logoUpload ? "default" : "secondary"}>
+                {limits.logoUpload ? "Enabled" : "Pro"}
+              </Badge>
+            </div>
+          </div>
+
+          {role !== 'enterprise' && (
+            <Button 
+              onClick={() => setShowUpgradeModal(true)}
+              className={
+                role === 'pro'
+                  ? 'w-full bg-gradient-to-r from-purple-500 to-pink-400 hover:opacity-90 border-0 text-white'
+                  : 'w-full bg-gradient-to-r from-orange-500 to-amber-400 hover:opacity-90 border-0 text-white'
+              }
+            >
+              {role === 'pro' ? '👑 Upgrade to Enterprise' : '⚡ Upgrade to Pro'}
+            </Button>
+          )}
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
           <CardTitle>Profile Settings</CardTitle>

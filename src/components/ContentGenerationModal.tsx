@@ -62,9 +62,21 @@ export default function ContentGenerationModal({
 
     setLoading(true);
     try {
+      // First, fetch the transcript
+      const { data: transcriptData, error: transcriptError } = await supabase
+        .from('transcripts')
+        .select('full_text')
+        .eq('webinar_id', webinarId)
+        .single();
+
+      if (transcriptError || !transcriptData?.full_text) {
+        throw new Error('Transcript not found. Please ensure the webinar has been transcribed.');
+      }
+
+      // Generate content with the transcript
       const { data, error } = await supabase.functions.invoke('generate-content', {
         body: {
-          webinarId,
+          transcript: transcriptData.full_text,
           platforms: selectedPlatforms,
           tone,
           persona: personaText || null
@@ -72,6 +84,10 @@ export default function ContentGenerationModal({
       });
 
       if (error) throw error;
+
+      if (data?.status === 'failed') {
+        throw new Error(data.error || 'Content generation failed');
+      }
 
       toast.success('Content generated successfully!');
       

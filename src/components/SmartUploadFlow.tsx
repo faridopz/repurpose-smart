@@ -146,7 +146,10 @@ export default function SmartUploadFlow({ userId }: SmartUploadFlowProps) {
   };
 
   const startProcessing = async () => {
+    console.log("🚀 Starting upload process...", { file: file?.name, title, userId });
+    
     if (!file || !title) {
+      console.error("❌ Missing file or title", { file: !!file, title });
       toast.error("Please provide a title and select a file");
       return;
     }
@@ -157,26 +160,36 @@ export default function SmartUploadFlow({ userId }: SmartUploadFlowProps) {
       setStatusMessage("Checking file...");
       setProgress(5);
       toast.info("Checking file...");
+      console.log("✅ File check passed");
 
       const filePath = `${userId}/${Date.now()}_${file.name}`;
+      console.log("📁 Upload path:", filePath);
       
       // Step 2: Uploading
       setStatusMessage("Preparing your webinar for transcription...");
       setProgress(10);
       toast.info("Preparing your webinar for transcription...");
       
+      console.log("⬆️ Uploading to storage...");
       const { error: uploadError } = await supabase.storage
         .from("webinars")
         .upload(filePath, file);
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error("❌ Storage upload error:", uploadError);
+        throw uploadError;
+      }
+      
+      console.log("✅ File uploaded successfully");
 
       const { data: { publicUrl } } = supabase.storage
         .from("webinars")
         .getPublicUrl(filePath);
 
+      console.log("🔗 File URL:", publicUrl);
       setProgress(30);
 
+      console.log("💾 Creating database record...");
       const { data: webinar, error: dbError } = await supabase
         .from("webinars")
         .insert({
@@ -190,7 +203,11 @@ export default function SmartUploadFlow({ userId }: SmartUploadFlowProps) {
         .select()
         .single();
 
-      if (dbError) throw dbError;
+      if (dbError) {
+        console.error("❌ Database error:", dbError);
+        throw dbError;
+      }
+      console.log("✅ Database record created:", webinar.id);
       setWebinarId(webinar.id);
 
       // Step 3: Processing audio
@@ -199,13 +216,17 @@ export default function SmartUploadFlow({ userId }: SmartUploadFlowProps) {
       setProgress(40);
       toast.info("Processing audio...");
 
+      console.log("🎙️ Calling transcribe-webinar function...");
       const { data: transcriptData, error: transcriptError } = await supabase.functions.invoke("transcribe-webinar", {
         body: { webinarId: webinar.id },
       });
 
       if (transcriptError) {
+        console.error("❌ Transcription error:", transcriptError);
         throw new Error("Unable to start transcription. Please try again.");
       }
+      
+      console.log("✅ Transcription started:", transcriptData);
 
       // Store diagnostics if available
       if (transcriptData?.diagnostics) {
@@ -222,8 +243,27 @@ export default function SmartUploadFlow({ userId }: SmartUploadFlowProps) {
       await pollTranscription(transcriptData.transcript_id, webinar.id);
 
     } catch (error: any) {
-      console.error("Processing error:", error);
-      toast.error("Something went wrong while preparing your transcript. Please try again.");
+      console.error("❌ UPLOAD FAILED:", error);
+      console.error("Error details:", {
+        message: error.message,
+        code: error.code,
+        details: error.details,
+        hint: error.hint,
+        status: error.status
+      });
+      
+      // More specific error messages
+      let errorMessage = "Something went wrong while preparing your transcript.";
+      
+      if (error.message?.includes("storage")) {
+        errorMessage = "Failed to upload file to storage. Please check your connection and try again.";
+      } else if (error.message?.includes("insert") || error.message?.includes("database")) {
+        errorMessage = "Failed to save webinar details. Please try again.";
+      } else if (error.message?.includes("transcription")) {
+        errorMessage = "Failed to start transcription. Please try again.";
+      }
+      
+      toast.error(errorMessage);
       setStep("upload");
       setProgress(0);
       setStatusMessage("");
